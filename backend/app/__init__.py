@@ -25,7 +25,7 @@ def create_app(config_class=Config):
     app.register_blueprint(admin.bp)
     app.register_blueprint(users.bp)
 
-    # ✅ Add root route to fix "Not Found" issue
+    # ✅ Root route
     @app.route('/')
     def home():
         return jsonify({
@@ -37,6 +37,14 @@ def create_app(config_class=Config):
                 "users": "/api/users/",
                 "health": "/api/health"
             }
-        })
+        }), 200
+
+    # ✅ Health check route (for Postman test)
+    @app.route('/api/health', methods=['GET'])
+    def health():
+        return jsonify({
+            "status": "running",
+            "message": "Flask backend is connected and healthy"
+        }), 200
 
     return app
