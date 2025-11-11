@@ -12,6 +12,7 @@ class UserRole(enum.Enum):
     USER = "user"
 
 class SuperAdmin(db.Model):
+    __tablename__ = 'super_admin'  # ✅ Fix added
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -25,6 +26,7 @@ class SuperAdmin(db.Model):
         return bcrypt.check_password_hash(self.password_hash, password)
 
 class Admin(db.Model):
+    __tablename__ = 'admin'  # ✅ Fix added
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -50,6 +52,7 @@ class Admin(db.Model):
         return datetime.utcnow() > self.expiry_date
 
 class User(db.Model):
+    __tablename__ = 'user'  # ✅ Fix added
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -68,6 +71,7 @@ class User(db.Model):
         return bcrypt.check_password_hash(self.password_hash, password)
 
 class ActivityLog(db.Model):
+    __tablename__ = 'activity_log'  # ✅ Fix added
     id = db.Column(db.Integer, primary_key=True)
     actor_role = db.Column(db.Enum(UserRole), nullable=False)
     actor_id = db.Column(db.Integer, nullable=False)
