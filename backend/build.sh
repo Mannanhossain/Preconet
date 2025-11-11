@@ -4,17 +4,25 @@ echo "🚀 Starting build process..."
 # Install dependencies
 pip install -r requirements.txt
 
-# Initialize database and create tables
+# Create all tables in the connected database
 python - <<'PYCODE'
 from app import create_app
 from app.models import db, SuperAdmin
+from sqlalchemy import inspect
 
 app = create_app()
 with app.app_context():
-    print("⚙️ Checking database tables...")
-    db.create_all()
+    print("⚙️ Checking database connection and tables...")
 
-    print("✅ Checking for default Super Admin...")
+    inspector = inspect(db.engine)
+    existing_tables = inspector.get_table_names()
+    print(f"📋 Existing tables before creation: {existing_tables}")
+
+    # Create tables if not present
+    db.create_all()
+    print("✅ Tables created successfully!")
+
+    # Ensure default SuperAdmin exists
     if not SuperAdmin.query.first():
         super_admin = SuperAdmin(
             name="Super Admin",
