@@ -10,12 +10,14 @@ class SuperAdminDashboard {
         this.setupEventListeners();
     }
 
+    // ✅ Load Dashboard Statistics
     async loadStats() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/superadmin/dashboard-stats');
+            // Fixed API endpoint ✅
+            const response = await auth.makeAuthenticatedRequest('/api/superadmin/dashboard-stats');
             const data = await response.json();
-            
-            if (response.ok) {
+
+            if (response.ok && data.stats) {
                 this.stats = data.stats;
                 this.renderStats();
             } else {
@@ -23,10 +25,11 @@ class SuperAdminDashboard {
             }
         } catch (error) {
             console.error('Error loading stats:', error);
-            auth.showNotification('Error loading dashboard data', 'error');
+            auth.showNotification('⚠️ Error loading dashboard data', 'error');
         }
     }
 
+    // ✅ Render Dashboard Cards
     renderStats() {
         const statsContainer = document.getElementById('stats-cards');
         if (!statsContainer || !this.stats) return;
@@ -34,33 +37,29 @@ class SuperAdminDashboard {
         const statsConfig = [
             { 
                 label: 'Total Admins', 
-                value: this.stats.total_admins, 
+                value: this.stats.total_admins ?? 0, 
                 icon: 'users-cog', 
-                color: 'blue',
                 bgColor: 'bg-blue-50',
                 textColor: 'text-blue-600'
             },
             { 
                 label: 'Total Users', 
-                value: this.stats.total_users, 
+                value: this.stats.total_users ?? 0, 
                 icon: 'users', 
-                color: 'green',
                 bgColor: 'bg-green-50',
                 textColor: 'text-green-600'
             },
             { 
                 label: 'Active Admins', 
-                value: this.stats.active_admins, 
+                value: this.stats.active_admins ?? 0, 
                 icon: 'user-check', 
-                color: 'green',
                 bgColor: 'bg-green-50',
                 textColor: 'text-green-600'
             },
             { 
                 label: 'Expired Admins', 
-                value: this.stats.expired_admins, 
+                value: this.stats.expired_admins ?? 0, 
                 icon: 'exclamation-triangle', 
-                color: 'red',
                 bgColor: 'bg-red-50',
                 textColor: 'text-red-600'
             }
@@ -87,6 +86,7 @@ class SuperAdminDashboard {
         `).join('');
     }
 
+    // ✅ Handle Sidebar Navigation
     setupNavigation() {
         const navItems = document.querySelectorAll('.nav-item');
         const pageTitle = document.getElementById('page-title');
@@ -113,7 +113,6 @@ class SuperAdminDashboard {
         navItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                
                 navItems.forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
 
@@ -129,50 +128,41 @@ class SuperAdminDashboard {
         });
     }
 
+    // ✅ Handle Page Switching
     showSection(section) {
-        // Hide all sections first
         const sections = ['dashboard', 'admins', 'activity'];
         sections.forEach(sec => {
-            const element = document.getElementById(`${sec}-section`);
-            if (element) {
-                element.style.display = 'none';
-            }
+            const el = document.getElementById(`${sec}-section`);
+            if (el) el.style.display = 'none';
         });
 
-        // Show create admin form in dashboard section
         const createAdminForm = document.querySelector('.lg\\:col-span-2');
         const recentActivity = document.querySelector('.lg\\:col-span-1');
-        
+
         if (section === 'dashboard') {
             if (createAdminForm) createAdminForm.style.display = 'block';
             if (recentActivity) recentActivity.style.display = 'block';
         } else {
             if (createAdminForm) createAdminForm.style.display = 'none';
             if (recentActivity) recentActivity.style.display = 'none';
-            
             const targetSection = document.getElementById(`${section}-section`);
-            if (targetSection) {
-                targetSection.style.display = 'block';
-            }
+            if (targetSection) targetSection.style.display = 'block';
         }
 
-        // Load section-specific data
+        // Load extra data for specific sections
         switch(section) {
             case 'admins':
-                if (typeof adminsManager !== 'undefined') {
-                    adminsManager.loadAdmins();
-                }
+                if (typeof adminsManager !== 'undefined') adminsManager.loadAdmins();
                 break;
             case 'activity':
-                if (typeof activityManager !== 'undefined') {
-                    activityManager.loadActivity();
-                }
+                if (typeof activityManager !== 'undefined') activityManager.loadActivity();
                 break;
         }
     }
 
+    // ✅ Event listeners for buttons or extra UI
     setupEventListeners() {
-        console.log('Super Admin Dashboard initialized successfully');
+        console.log('✅ Super Admin Dashboard initialized successfully');
     }
 }
 
