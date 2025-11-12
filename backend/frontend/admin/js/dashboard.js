@@ -14,7 +14,7 @@ class AdminDashboard {
     // ✅ Fetch dashboard stats from backend
     async loadStats() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/api/admin/dashboard-stats');
+            const response = await auth.makeAuthenticatedRequest('/admin/dashboard-stats'); // ✅ FIXED
             const data = await response.json();
             
             if (response.ok && data.stats) {
@@ -94,7 +94,7 @@ class AdminDashboard {
 
         const avgPerf = this.stats.avg_performance ?? 0;
         const totalUsers = this.stats.total_users ?? 0;
-        const userLimit = this.stats.user_limit ?? 1; // prevent division by zero
+        const userLimit = this.stats.user_limit ?? 1;
         const usagePercent = (totalUsers / userLimit) * 100;
 
         container.innerHTML = `
