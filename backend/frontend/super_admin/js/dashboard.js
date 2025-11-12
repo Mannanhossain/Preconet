@@ -13,6 +13,7 @@ class SuperAdminDashboard {
     // ✅ Load Dashboard Statistics
     async loadStats() {
         try {
+            // Fixed API endpoint ✅
             const response = await auth.makeAuthenticatedRequest('/api/superadmin/dashboard-stats');
             const data = await response.json();
 
@@ -159,72 +160,9 @@ class SuperAdminDashboard {
         }
     }
 
-    // ✅ Logout System
+    // ✅ Event listeners for buttons or extra UI
     setupEventListeners() {
         console.log('✅ Super Admin Dashboard initialized successfully');
-
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                if (confirm('Are you sure you want to log out?')) {
-                    sessionStorage.removeItem('super_admin_token');
-                    sessionStorage.removeItem('super_admin_user');
-                    auth.showNotification('You have logged out successfully', 'info');
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 800);
-                }
-            });
-        }
-
-        const exportBtn = document.getElementById('export-csv-btn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => this.exportCSV());
-        }
-    }
-
-    // ✅ Export Dashboard Data as CSV
-    async exportCSV() {
-        try {
-            const response = await auth.makeAuthenticatedRequest('/api/superadmin/admins');
-            const data = await response.json();
-
-            if (!response.ok || !data.admins) {
-                auth.showNotification('Failed to fetch admin data for export', 'error');
-                return;
-            }
-
-            // Convert to CSV format
-            const headers = ['ID', 'Name', 'Email', 'User Count', 'User Limit', 'Is Active', 'Expiry Date'];
-            const rows = data.admins.map(a => [
-                a.id,
-                a.name,
-                a.email,
-                a.user_count,
-                a.user_limit,
-                a.is_active ? 'Yes' : 'No',
-                a.expiry_date
-            ]);
-
-            const csvContent = [
-                headers.join(','),
-                ...rows.map(row => row.join(','))
-            ].join('\n');
-
-            // Trigger download
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `super_admin_report_${new Date().toISOString().slice(0, 10)}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-
-            auth.showNotification('✅ CSV file exported successfully!', 'success');
-        } catch (error) {
-            console.error('Error exporting CSV:', error);
-            auth.showNotification('⚠️ Error exporting CSV file', 'error');
-        }
     }
 }
 
