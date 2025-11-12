@@ -69,39 +69,58 @@ migrate = Migrate()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
-    
+
+    # Initialize extensions
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
     CORS(app)
 
+    # Register blueprints
     from .routes import super_admin, admin, users
     app.register_blueprint(super_admin.bp)
     app.register_blueprint(admin.bp)
     app.register_blueprint(users.bp)
 
-    # ✅ Frontend serving routes
+    # ✅ Frontend folder now inside backend
     FRONTEND_PATH = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 
+    # Serve super_admin dashboard
     @app.route('/')
     def serve_super_admin():
         return send_from_directory(os.path.join(FRONTEND_PATH, 'super_admin'), 'index.html')
 
+    # Serve admin dashboard
     @app.route('/admin')
     def serve_admin():
         return send_from_directory(os.path.join(FRONTEND_PATH, 'admin'), 'index.html')
 
-    # ✅ Serve static files
+    # Serve super_admin static files
     @app.route('/<path:path>')
-    def serve_static_files(path):
-        file_path = os.path.join(FRONTEND_PATH, 'super_admin', path)
+    def serve_super_admin_static(path):
+        super_admin_path = os.path.join(FRONTEND_PATH, 'super_admin')
+        file_path = os.path.join(super_admin_path, path)
         if os.path.exists(file_path):
-            return send_from_directory(os.path.join(FRONTEND_PATH, 'super_admin'), path)
+            return send_from_directory(super_admin_path, path)
         return jsonify({"error": "File not found"}), 404
 
-    @app.route("/api/health")
+    # Serve admin static files
+    @app.route('/admin/<path:path>')
+    def serve_admin_static(path):
+        admin_path = os.path.join(FRONTEND_PATH, 'admin')
+        file_path = os.path.join(admin_path, path)
+        if os.path.exists(file_path):
+            return send_from_directory(admin_path, path)
+        return jsonify({"error": "File not found"}), 404
+
+    # Health check
+    @app.route('/api/health')
     def health():
-        return jsonify({"status": "running", "message": "✅ Flask backend is healthy!"}), 200
+        return jsonify({
+            "status": "running",
+            "message": "✅ Flask backend is healthy!"
+        }), 200
 
     return app
+
