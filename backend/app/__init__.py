@@ -70,81 +70,38 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
-    # Initialize extensions
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
     CORS(app)
-    
-    # Register blueprints
+
     from .routes import super_admin, admin, users
     app.register_blueprint(super_admin.bp)
     app.register_blueprint(admin.bp)
     app.register_blueprint(users.bp)
-    
-    # --- Define absolute frontend paths ---
-    BASE_DIR = os.path.abspath(os.path.join(app.root_path, '..'))
-    FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
-    
-    # --- Serve Super Admin pages ---
+
+    # ✅ Frontend serving routes
+    FRONTEND_PATH = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+
     @app.route('/')
     def serve_super_admin():
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'super_admin'), 'index.html')
-    
-    @app.route('/super_admin/login.html')
-    def serve_super_admin_login():
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'super_admin'), 'login.html')
-    
-    # --- Serve Admin pages ---
+        return send_from_directory(os.path.join(FRONTEND_PATH, 'super_admin'), 'index.html')
+
     @app.route('/admin')
     def serve_admin():
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'admin'), 'index.html')
-    
-    @app.route('/admin/login.html')
-    def serve_admin_login():
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'admin'), 'login.html')
-    
-    # --- Serve static files for Super Admin ---
-    @app.route('/js/<path:filename>')
-    def serve_super_admin_js(filename):
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'super_admin', 'js'), filename)
-    
-    @app.route('/css/<path:filename>')
-    def serve_super_admin_css(filename):
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'super_admin', 'css'), filename)
-    
-    @app.route('/assets/<path:filename>')
-    def serve_super_admin_assets(filename):
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'super_admin', 'assets'), filename)
-    
-    # --- Serve static files for Admin ---
-    @app.route('/admin/js/<path:filename>')
-    def serve_admin_js(filename):
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'admin', 'js'), filename)
-    
-    @app.route('/admin/css/<path:filename>')
-    def serve_admin_css(filename):
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'admin', 'css'), filename)
-    
-    @app.route('/admin/assets/<path:filename>')
-    def serve_admin_assets(filename):
-        return send_from_directory(os.path.join(FRONTEND_DIR, 'admin', 'assets'), filename)
+        return send_from_directory(os.path.join(FRONTEND_PATH, 'admin'), 'index.html')
 
-    # --- API Health Check ---
-    @app.route('/api/health')
+    # ✅ Serve static files
+    @app.route('/<path:path>')
+    def serve_static_files(path):
+        file_path = os.path.join(FRONTEND_PATH, 'super_admin', path)
+        if os.path.exists(file_path):
+            return send_from_directory(os.path.join(FRONTEND_PATH, 'super_admin'), path)
+        return jsonify({"error": "File not found"}), 404
+
+    @app.route("/api/health")
     def health():
-        return jsonify({
-            "status": "running",
-            "message": "✅ Flask backend is healthy"
-        }), 200
+        return jsonify({"status": "running", "message": "✅ Flask backend is healthy!"}), 200
 
-    # --- SPA fallback for frontend routing ---
-    @app.errorhandler(404)
-    def not_found(e):
-        path = os.path.join(FRONTEND_DIR, 'super_admin', 'index.html')
-        if 'admin' in str(e):
-            path = os.path.join(FRONTEND_DIR, 'admin', 'index.html')
-        return send_from_directory(os.path.dirname(path), os.path.basename(path))
-    
     return app
