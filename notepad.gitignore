@@ -1,0 +1,30 @@
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# IDE and editor settings
+.vscode/
+.idea/
+
+# Node modules (for frontend)
+node_modules/
+
+# Build and dist folders
+build/
+dist/
+
+# Flutter build artifacts
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/.idea/
+flutter_app/.flutter-plugins*
+flutter_app/.packages
+flutter_app/pubspec.lock
+
+# Mac / Windows system files
+.DS_Store
+Thumbs.db
