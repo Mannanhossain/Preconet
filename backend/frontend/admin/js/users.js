@@ -28,7 +28,8 @@ class UsersManager {
         };
 
         try {
-            const response = await auth.makeAuthenticatedRequest('/api/admin/create-user', {
+            // ✅ FIXED URL
+            const response = await auth.makeAuthenticatedRequest('/admin/create-user', {
                 method: 'POST',
                 body: JSON.stringify(formData)
             });
@@ -56,7 +57,8 @@ class UsersManager {
     // ✅ Load all users
     async loadUsers() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/api/admin/users');
+            // ✅ FIXED URL
+            const response = await auth.makeAuthenticatedRequest('/admin/users');
             const data = await response.json();
             
             if (response.ok && Array.isArray(data.users)) {
@@ -144,7 +146,8 @@ class UsersManager {
         }
 
         try {
-            const response = await auth.makeAuthenticatedRequest(`/api/admin/delete-user/${userId}`, {
+            // ✅ FIXED URL
+            const response = await auth.makeAuthenticatedRequest(`/admin/delete-user/${userId}`, {
                 method: 'DELETE'
             });
 
