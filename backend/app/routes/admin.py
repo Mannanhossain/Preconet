@@ -22,11 +22,11 @@ def login():
         if admin.is_expired():
             return jsonify({'error': 'Account expired'}), 401
 
-        # Update last login time
+        # Update last login
         admin.last_login = datetime.utcnow()
         db.session.commit()
 
-        # ✅ FIX: Convert id to string
+        # ✅ Convert id to string for JWT
         access_token = create_access_token(
             identity=str(admin.id),
             additional_claims={'role': 'admin'}
@@ -53,7 +53,7 @@ def login():
 @jwt_required()
 def create_user():
     try:
-        current_user_id = int(get_jwt_identity())  # ✅ convert back to int
+        current_user_id = int(get_jwt_identity())
         admin = Admin.query.get(current_user_id)
 
         if not admin or not admin.is_active:
@@ -69,7 +69,7 @@ def create_user():
 
         data = request.get_json()
 
-        # Check if email already exists
+        # Check if email exists
         if User.query.filter_by(email=data.get('email')).first():
             return jsonify({'error': 'Email already exists'}), 400
 
@@ -79,7 +79,7 @@ def create_user():
             phone=data.get('phone'),
             admin_id=admin.id
         )
-        user.set_password(data.get('password', '123456'))  # default password
+        user.set_password(data.get('password', '123456'))  # Default password
 
         db.session.add(user)
 
@@ -92,7 +92,6 @@ def create_user():
             target_id=user.id
         )
         db.session.add(activity)
-
         db.session.commit()
 
         return jsonify({'message': 'User created successfully'}), 201
@@ -197,7 +196,6 @@ def update_user(user_id):
             target_id=user.id
         )
         db.session.add(activity)
-
         db.session.commit()
 
         return jsonify({'message': 'User updated successfully'}), 200
@@ -228,7 +226,6 @@ def delete_user(user_id):
             target_id=user.id
         )
         db.session.add(activity)
-
         db.session.delete(user)
         db.session.commit()
 
@@ -251,18 +248,22 @@ def dashboard_stats():
 
         total_users = User.query.filter_by(admin_id=admin.id).count()
         active_users = User.query.filter_by(admin_id=admin.id, is_active=True).count()
+        expired_users = User.query.filter(
+            User.admin_id == admin.id,
+            User.expiry_date < datetime.utcnow()
+        ).count() if hasattr(User, 'expiry_date') else 0
 
-        # Performance stats
         users = User.query.filter_by(admin_id=admin.id).all()
         total_performance = sum(user.performance_score for user in users)
-        avg_performance = total_performance / len(users) if users else 0
+        avg_performance = round(total_performance / len(users), 2) if users else 0
 
         stats = {
             'total_users': total_users,
             'active_users': active_users,
-            'avg_performance': round(avg_performance, 2),
+            'expired_users': expired_users,
+            'avg_performance': avg_performance,
             'user_limit': admin.user_limit,
-            'remaining_slots': admin.user_limit - total_users
+            'remaining_slots': max(0, admin.user_limit - total_users)
         }
 
         return jsonify({'stats': stats}), 200
