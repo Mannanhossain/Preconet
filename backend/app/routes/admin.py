@@ -26,7 +26,7 @@ def login():
         admin.last_login = datetime.utcnow()
         db.session.commit()
 
-        # ✅ Convert id to string for JWT
+        # ✅ Convert ID to string for JWT
         access_token = create_access_token(
             identity=str(admin.id),
             additional_claims={'role': 'admin'}
@@ -69,7 +69,6 @@ def create_user():
 
         data = request.get_json()
 
-        # Check if email exists
         if User.query.filter_by(email=data.get('email')).first():
             return jsonify({'error': 'Email already exists'}), 400
 
@@ -77,13 +76,14 @@ def create_user():
             name=data.get('name'),
             email=data.get('email'),
             phone=data.get('phone'),
-            admin_id=admin.id
+            admin_id=admin.id,
+            is_active=True,
+            performance_score=0
         )
-        user.set_password(data.get('password', '123456'))  # Default password
+        user.set_password(data.get('password', '123456'))
 
         db.session.add(user)
 
-        # Log activity
         activity = ActivityLog(
             actor_role=UserRole.ADMIN,
             actor_id=current_user_id,
@@ -112,10 +112,8 @@ def get_users():
             return jsonify({'error': 'Unauthorized'}), 401
 
         users = User.query.filter_by(admin_id=admin.id).all()
-        user_list = []
-
-        for user in users:
-            user_list.append({
+        user_list = [
+            {
                 'id': user.id,
                 'name': user.name,
                 'email': user.email,
@@ -124,39 +122,11 @@ def get_users():
                 'performance_score': user.performance_score,
                 'created_at': user.created_at.isoformat(),
                 'last_login': user.last_login.isoformat() if user.last_login else None
-            })
+            }
+            for user in users
+        ]
 
         return jsonify({'users': user_list}), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# 🟢 GET SINGLE USER
-@bp.route('/user/<int:user_id>', methods=['GET'])
-@jwt_required()
-def get_user(user_id):
-    try:
-        current_user_id = int(get_jwt_identity())
-        admin = Admin.query.get(current_user_id)
-
-        if not admin or not admin.is_active:
-            return jsonify({'error': 'Unauthorized'}), 401
-
-        user = User.query.filter_by(id=user_id, admin_id=admin.id).first_or_404()
-
-        user_data = {
-            'id': user.id,
-            'name': user.name,
-            'email': user.email,
-            'phone': user.phone,
-            'is_active': user.is_active,
-            'performance_score': user.performance_score,
-            'created_at': user.created_at.isoformat(),
-            'last_login': user.last_login.isoformat() if user.last_login else None
-        }
-
-        return jsonify({'user': user_data}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -187,7 +157,6 @@ def update_user(user_id):
         if 'performance_score' in data:
             user.performance_score = data['performance_score']
 
-        # Log activity
         activity = ActivityLog(
             actor_role=UserRole.ADMIN,
             actor_id=current_user_id,
@@ -217,7 +186,6 @@ def delete_user(user_id):
 
         user = User.query.filter_by(id=user_id, admin_id=admin.id).first_or_404()
 
-        # Log activity
         activity = ActivityLog(
             actor_role=UserRole.ADMIN,
             actor_id=current_user_id,
@@ -248,19 +216,15 @@ def dashboard_stats():
 
         total_users = User.query.filter_by(admin_id=admin.id).count()
         active_users = User.query.filter_by(admin_id=admin.id, is_active=True).count()
-        expired_users = User.query.filter(
-            User.admin_id == admin.id,
-            User.expiry_date < datetime.utcnow()
-        ).count() if hasattr(User, 'expiry_date') else 0
-
         users = User.query.filter_by(admin_id=admin.id).all()
-        total_performance = sum(user.performance_score for user in users)
+
+        total_performance = sum(user.performance_score or 0 for user in users)
         avg_performance = round(total_performance / len(users), 2) if users else 0
 
         stats = {
             'total_users': total_users,
             'active_users': active_users,
-            'expired_users': expired_users,
+            'expired_users': 0,  # You can add logic later if needed
             'avg_performance': avg_performance,
             'user_limit': admin.user_limit,
             'remaining_slots': max(0, admin.user_limit - total_users)
