@@ -18,16 +18,17 @@ class UsersManager {
         }
     }
 
+    // ✅ Create new user
     async createUser() {
         const formData = {
-            name: document.getElementById('userName').value,
-            email: document.getElementById('userEmail').value,
-            phone: document.getElementById('userPhone').value,
-            password: document.getElementById('userPassword').value
+            name: document.getElementById('userName').value.trim(),
+            email: document.getElementById('userEmail').value.trim(),
+            phone: document.getElementById('userPhone').value.trim(),
+            password: document.getElementById('userPassword').value.trim() || '123456'
         };
 
         try {
-            const response = await auth.makeAuthenticatedRequest('/admin/create-user', {
+            const response = await auth.makeAuthenticatedRequest('/api/admin/create-user', {
                 method: 'POST',
                 body: JSON.stringify(formData)
             });
@@ -35,15 +36,13 @@ class UsersManager {
             const data = await response.json();
 
             if (response.ok) {
-                auth.showNotification('User created successfully!', 'success');
+                auth.showNotification('✅ User created successfully!', 'success');
                 document.getElementById('createUserForm').reset();
-                // Reset password to default
-                document.getElementById('userPassword').value = '123456';
-                this.loadUsers();
-                
+                await this.loadUsers();
+
                 // Reload dashboard stats
                 if (typeof adminDashboard !== 'undefined') {
-                    adminDashboard.loadStats();
+                    await adminDashboard.loadStats();
                 }
             } else {
                 auth.showNotification(data.error || 'Failed to create user', 'error');
@@ -54,12 +53,13 @@ class UsersManager {
         }
     }
 
+    // ✅ Load all users
     async loadUsers() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/admin/users');
+            const response = await auth.makeAuthenticatedRequest('/api/admin/users');
             const data = await response.json();
             
-            if (response.ok) {
+            if (response.ok && Array.isArray(data.users)) {
                 this.users = data.users;
                 this.renderUsers();
             } else {
@@ -71,6 +71,7 @@ class UsersManager {
         }
     }
 
+    // ✅ Render users in table
     renderUsers() {
         const tableBody = document.getElementById('users-table-body');
         if (!tableBody) return;
@@ -100,15 +101,13 @@ class UsersManager {
                         </div>
                     </div>
                 </td>
-                <td class="px-4 py-4">
-                    <div class="text-sm text-gray-900">${user.phone || 'N/A'}</div>
-                </td>
+                <td class="px-4 py-4 text-sm text-gray-900">${user.phone || 'N/A'}</td>
                 <td class="px-4 py-4">
                     <div class="flex items-center space-x-2">
                         <div class="w-16 bg-gray-200 rounded-full h-2">
-                            <div class="bg-blue-600 h-2 rounded-full" style="width: ${user.performance_score}%"></div>
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: ${(user.performance_score || 0)}%"></div>
                         </div>
-                        <span class="text-sm font-medium text-gray-700">${user.performance_score}%</span>
+                        <span class="text-sm font-medium text-gray-700">${user.performance_score || 0}%</span>
                     </div>
                 </td>
                 <td class="px-4 py-4">
@@ -133,29 +132,30 @@ class UsersManager {
         `).join('');
     }
 
+    // 🧩 Edit user (future implementation)
     async editUser(userId) {
         auth.showNotification('Edit feature coming soon!', 'info');
     }
 
+    // ✅ Delete user
     async deleteUser(userId) {
         if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
             return;
         }
 
         try {
-            const response = await auth.makeAuthenticatedRequest(`/admin/delete-user/${userId}`, {
+            const response = await auth.makeAuthenticatedRequest(`/api/admin/delete-user/${userId}`, {
                 method: 'DELETE'
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                auth.showNotification('User deleted successfully!', 'success');
-                this.loadUsers();
-                
-                // Reload dashboard stats
+                auth.showNotification('✅ User deleted successfully!', 'success');
+                await this.loadUsers();
+
                 if (typeof adminDashboard !== 'undefined') {
-                    adminDashboard.loadStats();
+                    await adminDashboard.loadStats();
                 }
             } else {
                 auth.showNotification(data.error || 'Failed to delete user', 'error');
