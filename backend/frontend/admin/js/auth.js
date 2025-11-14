@@ -2,6 +2,7 @@ class AuthAdmin {
     constructor() {
         this.token = null;
         this.currentUser = null;
+        this.apiBaseUrl = '/api'; // ✅ Always use relative API path, works on Render & localhost
 
         // Decide whether to show login or dashboard
         if (window.location.pathname === '/admin/login.html' || window.location.pathname.endsWith('/admin/login')) {
@@ -39,8 +40,7 @@ class AuthAdmin {
         submitBtn.disabled = true;
 
         try {
-            // ✅ CORRECT: Full URL for login
-            const response = await fetch('/api/admin/login', {
+            const response = await fetch(`${this.apiBaseUrl}/admin/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -106,7 +106,7 @@ class AuthAdmin {
         }, 800);
     }
 
-    // ✅ FIXED: Make API calls with JWT
+    // ✅ Make API calls with JWT
     async makeAuthenticatedRequest(url, options = {}) {
         if (!this.token) {
             this.checkAuthentication();
@@ -121,8 +121,7 @@ class AuthAdmin {
             },
         };
 
-        // ✅ FIXED: Use the URL as-is (already includes /api prefix)
-        const response = await fetch(url, {
+        const response = await fetch(`${this.apiBaseUrl}${url}`, {
             ...defaultOptions,
             ...options,
         });
