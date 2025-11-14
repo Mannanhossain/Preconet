@@ -35,11 +35,9 @@ def login():
         if admin.is_expired():
             return jsonify({'error': 'Account expired'}), 401
 
-        # Update last login
         admin.last_login = datetime.utcnow()
         db.session.commit()
 
-        # Convert ID to string for JWT
         access_token = create_access_token(
             identity=str(admin.id),
             additional_claims={'role': 'admin'}
@@ -75,31 +73,21 @@ def create_user():
         if admin.is_expired():
             return jsonify({'error': 'Admin account expired'}), 401
 
-        # Check user limit
         user_count = User.query.filter_by(admin_id=admin.id).count()
         if user_count >= admin.user_limit:
             return jsonify({'error': 'User limit reached'}), 400
 
         data = request.get_json()
 
-<<<<<<< HEAD
-=======
-        # Validation
->>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9
         required_fields = ['name', 'email', 'password']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
 
-        # Email validation
         if not validate_email(data['email']):
             return jsonify({'error': 'Invalid email format'}), 400
 
-<<<<<<< HEAD
-        if User.query.filter_by(email=data['email']).first():
-=======
         if User.query.filter_by(email=data.get('email')).first():
->>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9
             return jsonify({'error': 'Email already exists'}), 400
 
         user = User(
@@ -205,8 +193,8 @@ def update_user(user_id):
             user.is_active = data['is_active']
         if 'performance_score' in data:
             score = data['performance_score']
-            if not isinstance(score, (int, float)) or score < 0 or score > 100:
-                return jsonify({'error': 'Performance score must be between 0 and 100'}), 400
+            if not isinstance(score, (int, float)) or not (0 <= score <= 100):
+                return jsonify({'error': 'Performance score must be 0–100'}), 400
             user.performance_score = score
 
         activity = ActivityLog(
