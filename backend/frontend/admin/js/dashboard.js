@@ -243,7 +243,11 @@ class AdminDashboard {
     // ✅ Fetch dashboard stats from backend
     async loadStats() {
         try {
+<<<<<<< HEAD
             const response = await auth.makeAuthenticatedRequest('/admin/dashboard-stats');
+=======
+            const response = await auth.makeAuthenticatedRequest('/admin/dashboard-stats'); // ✅ FIXED
+>>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
             const data = await response.json();
             
             if (response.ok && data.stats) {

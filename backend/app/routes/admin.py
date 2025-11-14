@@ -79,6 +79,7 @@ def create_user():
 
         data = request.get_json()
 
+<<<<<<< HEAD
         # Validation
         required_fields = ['name', 'email', 'password']
         for field in required_fields:
@@ -89,6 +90,8 @@ def create_user():
         if not validate_email(data['email']):
             return jsonify({'error': 'Invalid email format'}), 400
 
+=======
+>>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
         if User.query.filter_by(email=data.get('email')).first():
             return jsonify({'error': 'Email already exists'}), 400
 
@@ -98,7 +101,11 @@ def create_user():
             phone=data.get('phone'),
             admin_id=admin.id,
             is_active=True,
+<<<<<<< HEAD
             performance_score=data.get('performance_score', 0.0)
+=======
+            performance_score=0
+>>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
         )
         user.set_password(data.get('password', '123456'))
 
@@ -145,6 +152,7 @@ def get_users():
                 'is_active': user.is_active,
                 'performance_score': user.performance_score,
                 'created_at': user.created_at.isoformat(),
+<<<<<<< HEAD
                 'last_login': user.last_login.isoformat() if user.last_login else None,
                 'last_sync': user.last_sync.isoformat() if user.last_sync else None,
                 'has_sync_data': any([
@@ -153,6 +161,9 @@ def get_users():
                     user.attendance is not None,
                     user.contacts is not None
                 ])
+=======
+                'last_login': user.last_login.isoformat() if user.last_login else None
+>>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
             }
             for user in users
         ]
@@ -268,12 +279,15 @@ def dashboard_stats():
 
         total_performance = sum(user.performance_score or 0 for user in users)
         avg_performance = round(total_performance / len(users), 2) if users else 0
+<<<<<<< HEAD
 
         # Sync statistics
         users_with_sync = User.query.filter(
             User.admin_id == admin.id,
             User.last_sync.isnot(None)
         ).count()
+=======
+>>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
 
         stats = {
             'total_users': total_users,
@@ -281,9 +295,13 @@ def dashboard_stats():
             'expired_users': 0,  # You can add logic later if needed
             'avg_performance': avg_performance,
             'user_limit': admin.user_limit,
+<<<<<<< HEAD
             'remaining_slots': max(0, admin.user_limit - total_users),
             'users_with_sync': users_with_sync,
             'sync_rate': round((users_with_sync / total_users) * 100, 2) if total_users > 0 else 0
+=======
+            'remaining_slots': max(0, admin.user_limit - total_users)
+>>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
         }
 
         return jsonify({'stats': stats}), 200
