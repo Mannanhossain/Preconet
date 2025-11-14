@@ -6,53 +6,49 @@ import re
 
 bp = Blueprint('users', __name__, url_prefix='/api/users')
 
+
 def validate_email(email):
-    """Validate email format"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
+
 def validate_phone(phone):
-    """Validate phone number format"""
     pattern = r'^\+?1?\d{9,15}$'
     return re.match(pattern, phone) is not None
 
-# 🟢 USER REGISTRATION (Admin creates users)
+
+# 🟢 USER CREATION (Admin Creates User)
 @bp.route('/register', methods=['POST'])
 @jwt_required()
 def register():
     try:
-        # Only admins can create users
         current_admin_id = int(get_jwt_identity())
         admin = Admin.query.get(current_admin_id)
-        
+
         if not admin or not admin.is_active:
             return jsonify({'error': 'Admin access required'}), 403
-            
+
         if admin.is_expired():
             return jsonify({'error': 'Admin account has expired'}), 403
 
         data = request.get_json()
 
-        # Validation
         required_fields = ['name', 'email', 'password']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
 
-        # Email validation
         if not validate_email(data['email']):
             return jsonify({'error': 'Invalid email format'}), 400
 
-        # Check if email already exists
         if User.query.filter_by(email=data['email']).first():
             return jsonify({'error': 'Email already exists'}), 400
 
         # Check admin's user limit
-        current_user_count = User.query.filter_by(admin_id=admin.id, is_active=True).count()
+        current_user_count = User.query.filter_by(admin_id=admin.id).count()
         if current_user_count >= admin.user_limit:
             return jsonify({'error': 'User limit reached'}), 400
 
-        # Create user
         user = User(
             name=data['name'],
             email=data['email'],
@@ -63,12 +59,13 @@ def register():
         user.set_password(data['password'])
 
         db.session.add(user)
+        db.session.commit()   # Commit before logging so target_id exists
 
         # Log activity
         activity = ActivityLog(
             actor_role=UserRole.ADMIN,
             actor_id=current_admin_id,
-            action=f'Created user: {data["email"]}',
+            action=f'Created user: {user.email}',
             target_type='user',
             target_id=user.id
         )
@@ -89,35 +86,34 @@ def register():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
 # 🟢 USER LOGIN
 @bp.route('/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
-        
+
         if not data or not data.get('email') or not data.get('password'):
             return jsonify({'error': 'Email and password required'}), 400
 
-        user = User.query.filter_by(email=data.get('email')).first()
+        user = User.query.filter_by(email=data['email']).first()
 
-        if not user or not user.check_password(data.get('password')):
+        if not user or not user.check_password(data['password']):
             return jsonify({'error': 'Invalid credentials'}), 401
 
         if not user.is_active:
             return jsonify({'error': 'Account deactivated'}), 401
 
-        # Update last login
         user.last_login = datetime.utcnow()
         db.session.commit()
 
-        # Create access token
-        access_token = create_access_token(
+        token = create_access_token(
             identity=str(user.id),
             additional_claims={'role': 'user'}
         )
 
         return jsonify({
-            'access_token': access_token,
+            'access_token': token,
             'user': {
                 'id': user.id,
                 'name': user.name,
@@ -132,31 +128,35 @@ def login():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 # 🟢 UPDATE PERFORMANCE SCORE
 @bp.route('/performance', methods=['POST'])
 @jwt_required()
 def update_performance():
     try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
 
         if not user or not user.is_active:
             return jsonify({'error': 'Unauthorized'}), 401
 
         data = request.get_json()
+        score = data.get('performance_score')
 
-        if 'performance_score' in data:
-            # Validate performance score range
-            score = data['performance_score']
-            if not isinstance(score, (int, float)) or score < 0 or score > 100:
-                return jsonify({'error': 'Performance score must be between 0 and 100'}), 400
-            user.performance_score = score
+        if score is None:
+            return jsonify({'error': 'performance_score is required'}), 400
 
-        # Log activity
+        if not isinstance(score, (int, float)) or not (0 <= score <= 100):
+            return jsonify({'error': 'Performance score must be between 0 and 100'}), 400
+
+        user.performance_score = score
+        db.session.commit()
+
+        # Log
         activity = ActivityLog(
             actor_role=UserRole.USER,
-            actor_id=current_user_id,
-            action=f'Updated performance score to {user.performance_score}',
+            actor_id=user_id,
+            action=f'Updated performance score to {score}',
             target_type='user',
             target_id=user.id
         )
@@ -164,7 +164,7 @@ def update_performance():
         db.session.commit()
 
         return jsonify({
-            'message': 'Performance updated successfully',
+            'message': 'Performance updated',
             'performance_score': user.performance_score
         }), 200
 
@@ -172,48 +172,50 @@ def update_performance():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
 # 🟢 GET USER PROFILE
 @bp.route('/me', methods=['GET'])
 @jwt_required()
 def get_me():
     try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
 
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        user_data = {
-            'id': user.id,
-            'name': user.name,
-            'email': user.email,
-            'phone': user.phone,
-            'performance_score': user.performance_score,
-            'created_at': user.created_at.isoformat(),
-            'last_login': user.last_login.isoformat() if user.last_login else None,
-            'last_sync': user.last_sync.isoformat() if user.last_sync else None,
-            'sync_summary': user.get_sync_summary() if hasattr(user, 'get_sync_summary') else {}
-        }
-
-        return jsonify({'user': user_data}), 200
+        return jsonify({
+            'user': {
+                'id': user.id,
+                'name': user.name,
+                'email': user.email,
+                'phone': user.phone,
+                'performance_score': user.performance_score,
+                'created_at': user.created_at.isoformat(),
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'last_sync': user.last_sync.isoformat() if user.last_sync else None,
+                'sync_summary': user.get_sync_summary() if hasattr(user, 'get_sync_summary') else {}
+            }
+        }), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# 🟢 SYNC USER DATA (Your added function)
+
+# 🟢 SYNC USER DATA (Flutter App)
 @bp.route('/sync', methods=['POST'])
 @jwt_required()
 def sync_data():
     try:
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
-        
+
         if not user:
-            return jsonify({'error': 'Invalid user'}), 404
+            return jsonify({'error': 'User not found'}), 404
 
         data = request.get_json() or {}
 
-        # Use the helper method if available, otherwise update manually
+        # Use helper method if exists
         if hasattr(user, 'update_sync_data'):
             user.update_sync_data(
                 analytics=data.get('analytics'),
@@ -222,24 +224,20 @@ def sync_data():
                 contacts=data.get('contacts')
             )
         else:
-            # Manual update if helper method doesn't exist
-            if 'analytics' in data:
-                user.analytics_data = data['analytics']
-            if 'call_history' in data:
-                user.call_history = data['call_history']
-            if 'attendance' in data:
-                user.attendance = data['attendance']
-            if 'contacts' in data:
-                user.contacts = data['contacts']
+            if 'analytics' in data: user.analytics_data = data['analytics']
+            if 'call_history' in data: user.call_history = data['call_history']
+            if 'attendance' in data: user.attendance = data['attendance']
+            if 'contacts' in data: user.contacts = data['contacts']
             user.last_sync = datetime.utcnow()
 
-        # Log sync activity
+        db.session.commit()
+
         activity = ActivityLog(
             actor_role=UserRole.USER,
             actor_id=user_id,
-            action='Synced user data from mobile app',
+            action='Synced user data',
             target_type='user',
-            target_id=user.id
+            target_id=user_id
         )
         db.session.add(activity)
         db.session.commit()
@@ -254,6 +252,7 @@ def sync_data():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
 # 🟢 GET SYNC STATUS
 @bp.route('/sync-status', methods=['GET'])
 @jwt_required()
@@ -261,19 +260,19 @@ def get_sync_status():
     try:
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
-        
+
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        sync_info = {
-            'last_sync': user.last_sync.isoformat() if user.last_sync else None,
-            'has_analytics': user.analytics_data is not None,
-            'has_call_history': user.call_history is not None,
-            'has_attendance': user.attendance is not None,
-            'has_contacts': user.contacts is not None
-        }
-
-        return jsonify({'sync_status': sync_info}), 200
+        return jsonify({
+            'sync_status': {
+                'last_sync': user.last_sync.isoformat() if user.last_sync else None,
+                'has_analytics': user.analytics_data is not None,
+                'has_call_history': user.call_history is not None,
+                'has_attendance': user.attendance is not None,
+                'has_contacts': user.contacts is not None,
+            }
+        }), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

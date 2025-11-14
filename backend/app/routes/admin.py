@@ -6,15 +6,18 @@ import re
 
 bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
+
 def validate_email(email):
     """Validate email format"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
+
 def validate_phone(phone):
     """Validate phone number format"""
     pattern = r'^\+?1?\d{9,15}$'
     return re.match(pattern, phone) is not None
+
 
 # 🟢 ADMIN LOGIN
 @bp.route('/login', methods=['POST'])
@@ -36,7 +39,7 @@ def login():
         admin.last_login = datetime.utcnow()
         db.session.commit()
 
-        # ✅ Convert ID to string for JWT
+        # Convert ID to string for JWT
         access_token = create_access_token(
             identity=str(admin.id),
             additional_claims={'role': 'admin'}
@@ -79,8 +82,6 @@ def create_user():
 
         data = request.get_json()
 
-<<<<<<< HEAD
-        # Validation
         required_fields = ['name', 'email', 'password']
         for field in required_fields:
             if not data.get(field):
@@ -90,9 +91,7 @@ def create_user():
         if not validate_email(data['email']):
             return jsonify({'error': 'Invalid email format'}), 400
 
-=======
->>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
-        if User.query.filter_by(email=data.get('email')).first():
+        if User.query.filter_by(email=data['email']).first():
             return jsonify({'error': 'Email already exists'}), 400
 
         user = User(
@@ -101,11 +100,7 @@ def create_user():
             phone=data.get('phone'),
             admin_id=admin.id,
             is_active=True,
-<<<<<<< HEAD
             performance_score=data.get('performance_score', 0.0)
-=======
-            performance_score=0
->>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
         )
         user.set_password(data.get('password', '123456'))
 
@@ -152,7 +147,6 @@ def get_users():
                 'is_active': user.is_active,
                 'performance_score': user.performance_score,
                 'created_at': user.created_at.isoformat(),
-<<<<<<< HEAD
                 'last_login': user.last_login.isoformat() if user.last_login else None,
                 'last_sync': user.last_sync.isoformat() if user.last_sync else None,
                 'has_sync_data': any([
@@ -161,9 +155,6 @@ def get_users():
                     user.attendance is not None,
                     user.contacts is not None
                 ])
-=======
-                'last_login': user.last_login.isoformat() if user.last_login else None
->>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
             }
             for user in users
         ]
@@ -194,10 +185,8 @@ def update_user(user_id):
         if 'name' in data:
             user.name = data['name']
         if 'email' in data:
-            # Validate new email
             if not validate_email(data['email']):
                 return jsonify({'error': 'Invalid email format'}), 400
-            # Check if email is already taken by another user
             existing_user = User.query.filter(User.email == data['email'], User.id != user_id).first()
             if existing_user:
                 return jsonify({'error': 'Email already taken'}), 400
@@ -279,29 +268,21 @@ def dashboard_stats():
 
         total_performance = sum(user.performance_score or 0 for user in users)
         avg_performance = round(total_performance / len(users), 2) if users else 0
-<<<<<<< HEAD
 
-        # Sync statistics
         users_with_sync = User.query.filter(
             User.admin_id == admin.id,
             User.last_sync.isnot(None)
         ).count()
-=======
->>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
 
         stats = {
             'total_users': total_users,
             'active_users': active_users,
-            'expired_users': 0,  # You can add logic later if needed
+            'expired_users': 0,
             'avg_performance': avg_performance,
             'user_limit': admin.user_limit,
-<<<<<<< HEAD
             'remaining_slots': max(0, admin.user_limit - total_users),
             'users_with_sync': users_with_sync,
             'sync_rate': round((users_with_sync / total_users) * 100, 2) if total_users > 0 else 0
-=======
-            'remaining_slots': max(0, admin.user_limit - total_users)
->>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
         }
 
         return jsonify({'stats': stats}), 200
@@ -310,7 +291,7 @@ def dashboard_stats():
         return jsonify({'error': str(e)}), 500
 
 
-# 🟢 GET USER SYNC DATA (Your added functionality)
+# 🟢 GET USER SYNC DATA
 @bp.route('/user-data/<int:user_id>', methods=['GET'])
 @jwt_required()
 def admin_get_user_data(user_id):
@@ -321,12 +302,10 @@ def admin_get_user_data(user_id):
         if not admin or not admin.is_active:
             return jsonify({'error': 'Unauthorized'}), 401
 
-        # Verify the user belongs to this admin
         user = User.query.filter_by(id=user_id, admin_id=admin.id).first()
         if not user:
             return jsonify({'error': 'User not found or access denied'}), 404
 
-        # Log the data access activity
         activity = ActivityLog(
             actor_role=UserRole.ADMIN,
             actor_id=current_user_id,
@@ -353,7 +332,7 @@ def admin_get_user_data(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-# 🟢 GET ALL USERS SYNC STATUS
+# 🟢 ALL USERS SYNC STATUS
 @bp.route('/users-sync-status', methods=['GET'])
 @jwt_required()
 def get_all_users_sync_status():
@@ -365,10 +344,10 @@ def get_all_users_sync_status():
             return jsonify({'error': 'Unauthorized'}), 401
 
         users = User.query.filter_by(admin_id=admin.id).all()
-        
+
         sync_status_list = []
         for user in users:
-            sync_info = {
+            sync_status_list.append({
                 'user_id': user.id,
                 'user_name': user.name,
                 'user_email': user.email,
@@ -378,11 +357,9 @@ def get_all_users_sync_status():
                 'has_attendance': user.attendance is not None,
                 'has_contacts': user.contacts is not None,
                 'days_since_sync': (
-                    (datetime.utcnow() - user.last_sync).days 
-                    if user.last_sync else None
+                    (datetime.utcnow() - user.last_sync).days if user.last_sync else None
                 )
-            }
-            sync_status_list.append(sync_info)
+            })
 
         return jsonify({'users_sync_status': sync_status_list}), 200
 

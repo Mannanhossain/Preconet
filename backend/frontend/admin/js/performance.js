@@ -3,70 +3,79 @@ class PerformanceManager {
         this.chart = null;
     }
 
-    // ✅ Load all user performance data
+    // ---------------------------------------------------------
+    // LOAD PERFORMANCE DATA
+    // ---------------------------------------------------------
     async loadPerformance() {
         try {
-            // ✅ FIXED URL (removed extra /api)
+            // Correct URL (NO /api prefix here)
             const response = await auth.makeAuthenticatedRequest('/admin/users');
             const data = await response.json();
 
             if (response.ok && Array.isArray(data.users)) {
+                if (data.users.length === 0) {
+                    auth.showNotification("No users found to display performance", "info");
+                    return;
+                }
                 this.renderChart(data.users);
             } else {
-                auth.showNotification('Failed to load performance data', 'error');
+                auth.showNotification(data.error || 'Failed to load performance data', 'error');
             }
+
         } catch (error) {
             console.error('Error loading performance:', error);
             auth.showNotification('Error loading performance data', 'error');
         }
     }
 
-    // ✅ Render Bar Chart with Chart.js
+    // ---------------------------------------------------------
+    // RENDER CHART
+    // ---------------------------------------------------------
     renderChart(users) {
-        const ctx = document.getElementById('performanceChart');
-        if (!ctx) return;
+        const canvas = document.getElementById('performanceChart');
+        if (!canvas) {
+            console.warn("Canvas element #performanceChart not found");
+            return;
+        }
 
-        // Destroy existing chart before re-rendering
+        // Destroy previous chart instance
         if (this.chart) {
             this.chart.destroy();
         }
 
-        // Prepare data
-        const userNames = users.map(user => user.name || 'Unnamed');
-        const performanceScores = users.map(user => user.performance_score || 0);
+        // Prepare dataset
+        const labels = users.map(u => u.name || "Unnamed");
+        const scores = users.map(u => Number(u.performance_score) || 0);
 
-        // Chart.js bar chart
-        this.chart = new Chart(ctx, {
-            type: 'bar',
+        // Dynamic bar colors
+        const barColors = scores.map(score => {
+            if (score >= 80) return "rgba(34,197,94,0.8)";   // Green - excellent
+            if (score >= 50) return "rgba(234,179,8,0.8)";   // Yellow - average
+            return "rgba(239,68,68,0.8)";                    // Red - poor
+        });
+
+        // Create chart
+        this.chart = new Chart(canvas, {
+            type: "bar",
             data: {
-                labels: userNames,
+                labels: labels,
                 datasets: [{
-                    label: 'Performance Score (%)',
-                    data: performanceScores,
-                    backgroundColor: performanceScores.map(score =>
-                        score > 80
-                            ? 'rgba(34, 197, 94, 0.8)'   // Green - Excellent
-                            : score > 50
-                                ? 'rgba(234, 179, 8, 0.8)'  // Yellow - Average
-                                : 'rgba(239, 68, 68, 0.8)'  // Red - Poor
-                    ),
-                    borderColor: 'rgba(31, 41, 55, 0.9)',
-                    borderWidth: 1,
+                    label: "Performance Score (%)",
+                    data: scores,
+                    backgroundColor: barColors,
+                    borderColor: "rgba(31,41,55,0.9)",
+                    borderWidth: 1.5,
                     borderRadius: 6
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: true,
-                        labels: {
-                            font: { size: 14 }
-                        }
-                    },
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: (context) => ` ${context.parsed.y}% performance`
+                            label: ctx => `${ctx.parsed.y}% performance`
                         }
                     }
                 },
@@ -78,14 +87,14 @@ class PerformanceManager {
                         title: {
                             display: true,
                             text: 'Performance Score (%)',
-                            font: { size: 14, weight: 'bold' }
+                            font: { size: 13, weight: "bold" }
                         }
                     },
                     x: {
                         title: {
                             display: true,
                             text: 'Users',
-                            font: { size: 14, weight: 'bold' }
+                            font: { size: 13, weight: "bold" }
                         }
                     }
                 }
@@ -94,5 +103,7 @@ class PerformanceManager {
     }
 }
 
-// ✅ Initialize performance manager
+// ---------------------------------------------------------
+// Initialize when switching to Performance tab
+// ---------------------------------------------------------
 const performanceManager = new PerformanceManager();

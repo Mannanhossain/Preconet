@@ -1,236 +1,26 @@
-// class AdminDashboard {
-//     constructor() {
-//         this.stats = null;
-//         this.init();
-//     }
-
-//     async init() {
-//         await this.loadStats();
-//         this.setupNavigation();
-//         this.setupLogout();
-//         this.setupEventListeners();
-//     }
-
-//     // ✅ Fetch dashboard stats from backend
-//     async loadStats() {
-//         try {
-//             const response = await auth.makeAuthenticatedRequest('/admin/dashboard-stats'); // ✅ FIXED
-//             const data = await response.json();
-            
-//             if (response.ok && data.stats) {
-//                 this.stats = data.stats;
-//                 this.renderStats();
-//                 this.renderPerformanceOverview();
-//             } else {
-//                 auth.showNotification('Failed to load dashboard stats', 'error');
-//             }
-//         } catch (error) {
-//             console.error('Error loading stats:', error);
-//             auth.showNotification('Error loading dashboard data', 'error');
-//         }
-//     }
-
-//     // ✅ Display main dashboard stats
-//     renderStats() {
-//         const statsContainer = document.getElementById('stats-cards');
-//         if (!statsContainer || !this.stats) return;
-
-//         const statsConfig = [
-//             { 
-//                 label: 'Total Users', 
-//                 value: this.stats.total_users ?? 0, 
-//                 icon: 'users', 
-//                 bgColor: 'bg-blue-50',
-//                 textColor: 'text-blue-600'
-//             },
-//             { 
-//                 label: 'Active Users', 
-//                 value: this.stats.active_users ?? 0, 
-//                 icon: 'user-check', 
-//                 bgColor: 'bg-green-50',
-//                 textColor: 'text-green-600'
-//             },
-//             { 
-//                 label: 'Expired Users', 
-//                 value: this.stats.expired_users ?? 0, 
-//                 icon: 'user-times', 
-//                 bgColor: 'bg-red-50',
-//                 textColor: 'text-red-600'
-//             },
-//             { 
-//                 label: 'Remaining Slots', 
-//                 value: this.stats.remaining_slots ?? 0, 
-//                 icon: 'user-plus', 
-//                 bgColor: 'bg-orange-50',
-//                 textColor: 'text-orange-600'
-//             }
-//         ];
-
-//         statsContainer.innerHTML = statsConfig.map(stat => `
-//             <div class="stat-card bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-//                 <div class="flex items-center justify-between">
-//                     <div>
-//                         <p class="text-sm font-medium text-gray-600 mb-1">${stat.label}</p>
-//                         <p class="text-3xl font-bold text-gray-900">${stat.value}</p>
-//                     </div>
-//                     <div class="${stat.bgColor} w-12 h-12 rounded-lg flex items-center justify-center">
-//                         <i class="fas fa-${stat.icon} ${stat.textColor} text-lg"></i>
-//                     </div>
-//                 </div>
-//                 <div class="mt-4 pt-4 border-t border-gray-100">
-//                     <div class="flex items-center text-xs text-gray-500">
-//                         <i class="fas fa-clock mr-1"></i>
-//                         <span>Updated just now</span>
-//                     </div>
-//                 </div>
-//             </div>
-//         `).join('');
-//     }
-
-//     // ✅ Performance overview card
-//     renderPerformanceOverview() {
-//         const container = document.getElementById('performance-chart');
-//         if (!container || !this.stats) return;
-
-//         const avgPerf = this.stats.avg_performance ?? 0;
-//         const totalUsers = this.stats.total_users ?? 0;
-//         const userLimit = this.stats.user_limit ?? 1;
-//         const usagePercent = (totalUsers / userLimit) * 100;
-
-//         container.innerHTML = `
-//             <div class="text-center mb-4">
-//                 <div class="text-3xl font-bold text-gray-900 mb-1">${avgPerf}%</div>
-//                 <div class="text-sm text-gray-600">Average Performance</div>
-//             </div>
-//             <div class="space-y-3">
-//                 <div class="flex justify-between text-sm">
-//                     <span class="text-gray-600">User Limit</span>
-//                     <span class="font-medium">${totalUsers}/${userLimit}</span>
-//                 </div>
-//                 <div class="w-full bg-gray-200 rounded-full h-2">
-//                     <div class="bg-green-600 h-2 rounded-full" style="width: ${usagePercent}%"></div>
-//                 </div>
-//                 <div class="flex justify-between text-sm">
-//                     <span class="text-gray-600">Active Users</span>
-//                     <span class="font-medium">${this.stats.active_users}</span>
-//                 </div>
-//             </div>
-//         `;
-//     }
-
-//     // ✅ Navigation section switching
-//     setupNavigation() {
-//         const navItems = document.querySelectorAll('.nav-item');
-//         const pageTitle = document.getElementById('page-title');
-//         const pageSubtitle = document.getElementById('page-subtitle');
-
-//         const pages = {
-//             dashboard: {
-//                 title: 'Admin Dashboard',
-//                 subtitle: 'Manage your users and track performance',
-//                 section: 'dashboard-section'
-//             },
-//             users: {
-//                 title: 'Manage Users',
-//                 subtitle: 'Add, edit, and manage user accounts',
-//                 section: 'users-section'
-//             },
-//             performance: {
-//                 title: 'Performance Analytics',
-//                 subtitle: 'Monitor and analyze user performance data',
-//                 section: 'performance-section'
-//             }
-//         };
-
-//         navItems.forEach(item => {
-//             item.addEventListener('click', (e) => {
-//                 e.preventDefault();
-//                 navItems.forEach(nav => nav.classList.remove('active'));
-//                 item.classList.add('active');
-
-//                 const target = item.getAttribute('href').substring(1);
-//                 const page = pages[target];
-
-//                 if (page) {
-//                     pageTitle.textContent = page.title;
-//                     pageSubtitle.textContent = page.subtitle;
-//                     this.showSection(target);
-//                 }
-//             });
-//         });
-//     }
-
-//     // ✅ Show/hide sections dynamically
-//     showSection(section) {
-//         const sections = ['dashboard', 'users', 'performance'];
-//         sections.forEach(sec => {
-//             const el = document.getElementById(`${sec}-section`);
-//             if (el) el.style.display = 'none';
-//         });
-
-//         const targetEl = document.getElementById(`${section}-section`);
-//         if (targetEl) targetEl.style.display = 'block';
-
-//         switch (section) {
-//             case 'users':
-//                 if (typeof usersManager !== 'undefined') usersManager.loadUsers();
-//                 break;
-//             case 'performance':
-//                 if (typeof performanceManager !== 'undefined') performanceManager.loadPerformance();
-//                 break;
-//         }
-//     }
-
-//     // ✅ Logout handling
-//     setupLogout() {
-//         const logoutBtn = document.getElementById('logout-btn');
-//         if (!logoutBtn) return;
-
-//         logoutBtn.addEventListener('click', (e) => {
-//             e.preventDefault();
-//             sessionStorage.removeItem('admin_token');
-//             sessionStorage.removeItem('admin_user');
-//             auth.showNotification('Logged out successfully', 'success');
-//             setTimeout(() => {
-//                 window.location.href = '/admin/login.html';
-//             }, 1000);
-//         });
-//     }
-
-//     setupEventListeners() {
-//         console.log('✅ Admin Dashboard initialized successfully');
-//     }
-// }
-
-// document.addEventListener('DOMContentLoaded', () => {
-//     new AdminDashboard();
-// });
-
-
-
 class AdminDashboard {
     constructor() {
         this.stats = null;
         this.currentSection = 'dashboard';
         this.users = [];
+        window.adminDashboard = this; // ensure global access
         this.init();
     }
 
     async init() {
-        // Check authentication first
-        if (!this.checkAuth()) {
-            return;
-        }
-        
+        if (!this.checkAuth()) return;
+
         await this.loadStats();
+        await this.loadUsers();
+
         this.setupNavigation();
         this.setupLogout();
         this.setupEventListeners();
-        
-        // Load users for the users section
-        await this.loadUsers();
     }
 
+    // ---------------------------------------------------------
+    // AUTH CHECK
+    // ---------------------------------------------------------
     checkAuth() {
         const token = sessionStorage.getItem('admin_token');
         if (!token) {
@@ -240,35 +30,35 @@ class AdminDashboard {
         return true;
     }
 
-    // ✅ Fetch dashboard stats from backend
+    // ---------------------------------------------------------
+    // LOAD STATS (FIXED: Removed duplicate /api)
+    // ---------------------------------------------------------
     async loadStats() {
         try {
-<<<<<<< HEAD
             const response = await auth.makeAuthenticatedRequest('/admin/dashboard-stats');
-=======
-            const response = await auth.makeAuthenticatedRequest('/admin/dashboard-stats'); // ✅ FIXED
->>>>>>> b0c16d603df60af4b5ba118bff2661c660cd8e8c
             const data = await response.json();
-            
+
             if (response.ok && data.stats) {
                 this.stats = data.stats;
                 this.renderStats();
                 this.renderPerformanceOverview();
             } else {
-                auth.showNotification('Failed to load dashboard stats', 'error');
+                auth.showNotification(data.error || 'Failed to load dashboard stats', 'error');
             }
         } catch (error) {
-            console.error('Error loading stats:', error);
+            console.error('Stats error:', error);
             auth.showNotification('Error loading dashboard data', 'error');
         }
     }
 
-    // ✅ Load all users for management
+    // ---------------------------------------------------------
+    // LOAD USERS (FIXED: Removed duplicate /api)
+    // ---------------------------------------------------------
     async loadUsers() {
         try {
             const response = await auth.makeAuthenticatedRequest('/admin/users');
             const data = await response.json();
-            
+
             if (response.ok && data.users) {
                 this.users = data.users;
                 this.renderUsersTable();
@@ -276,362 +66,347 @@ class AdminDashboard {
                 auth.showNotification('Failed to load users', 'error');
             }
         } catch (error) {
-            console.error('Error loading users:', error);
+            console.error('Users error:', error);
             auth.showNotification('Error loading users', 'error');
         }
     }
 
-    // ✅ Display main dashboard stats
+    // ---------------------------------------------------------
+    // RENDER DASHBOARD STATS
+    // ---------------------------------------------------------
     renderStats() {
-        const statsContainer = document.getElementById('stats-cards');
-        if (!statsContainer || !this.stats) return;
+        const container = document.getElementById('stats-cards');
+        if (!container || !this.stats) return;
 
-        const statsConfig = [
-            { 
-                label: 'Total Users', 
-                value: this.stats.total_users ?? 0, 
-                icon: 'users', 
-                bgColor: 'bg-blue-50',
-                textColor: 'text-blue-600'
+        const stats = this.stats;
+
+        const items = [
+            {
+                label: "Total Users",
+                value: stats.total_users,
+                icon: "users",
+                bg: "bg-blue-50",
+                text: "text-blue-600"
             },
-            { 
-                label: 'Active Users', 
-                value: this.stats.active_users ?? 0, 
-                icon: 'user-check', 
-                bgColor: 'bg-green-50',
-                textColor: 'text-green-600'
+            {
+                label: "Active Users",
+                value: stats.active_users,
+                icon: "user-check",
+                bg: "bg-green-50",
+                text: "text-green-600"
             },
-            { 
-                label: 'Users with Sync Data', 
-                value: this.stats.users_with_sync ?? 0, 
-                icon: 'sync', 
-                bgColor: 'bg-purple-50',
-                textColor: 'text-purple-600'
+            {
+                label: "Users with Sync Data",
+                value: stats.users_with_sync,
+                icon: "sync",
+                bg: "bg-purple-50",
+                text: "text-purple-600"
             },
-            { 
-                label: 'Remaining Slots', 
-                value: this.stats.remaining_slots ?? 0, 
-                icon: 'user-plus', 
-                bgColor: 'bg-orange-50',
-                textColor: 'text-orange-600'
+            {
+                label: "Remaining Slots",
+                value: stats.remaining_slots,
+                icon: "user-plus",
+                bg: "bg-orange-50",
+                text: "text-orange-600"
             }
         ];
 
-        statsContainer.innerHTML = statsConfig.map(stat => `
-            <div class="stat-card bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600 mb-1">${stat.label}</p>
-                        <p class="text-3xl font-bold text-gray-900">${stat.value}</p>
-                    </div>
-                    <div class="${stat.bgColor} w-12 h-12 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-${stat.icon} ${stat.textColor} text-lg"></i>
-                    </div>
-                </div>
-                <div class="mt-4 pt-4 border-t border-gray-100">
-                    <div class="flex items-center text-xs text-gray-500">
-                        <i class="fas fa-clock mr-1"></i>
-                        <span>Updated just now</span>
+        container.innerHTML = items
+            .map(
+                (s) => `
+                <div class="stat-card bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">${s.label}</p>
+                            <p class="text-3xl font-bold">${s.value}</p>
+                        </div>
+                        <div class="${s.bg} w-12 h-12 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-${s.icon} ${s.text} text-lg"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `
+            )
+            .join("");
     }
 
-    // ✅ Performance overview card
+    // ---------------------------------------------------------
+    // PERFORMANCE OVERVIEW
+    // ---------------------------------------------------------
     renderPerformanceOverview() {
         const container = document.getElementById('performance-chart');
         if (!container || !this.stats) return;
 
-        const avgPerf = this.stats.avg_performance ?? 0;
-        const totalUsers = this.stats.total_users ?? 0;
-        const userLimit = this.stats.user_limit ?? 1;
-        const usagePercent = (totalUsers / userLimit) * 100;
+        const s = this.stats;
+        const avg = s.avg_performance ?? 0;
+        const total = s.total_users ?? 0;
+        const limit = s.user_limit ?? 1;
+
+        const percent = (total / limit) * 100;
 
         container.innerHTML = `
-            <div class="text-center mb-4">
-                <div class="text-3xl font-bold text-gray-900 mb-1">${avgPerf}%</div>
-                <div class="text-sm text-gray-600">Average Performance</div>
+            <div class="text-center">
+                <div class="text-3xl font-bold">${avg}%</div>
+                <div class="text-gray-600">Average Performance</div>
             </div>
-            <div class="space-y-3">
+
+            <div class="mt-4 space-y-3">
                 <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">User Limit</span>
-                    <span class="font-medium">${totalUsers}/${userLimit}</span>
+                    <span>User Limit</span>
+                    <span>${total}/${limit}</span>
                 </div>
+
                 <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="bg-green-600 h-2 rounded-full" style="width: ${Math.min(usagePercent, 100)}%"></div>
+                    <div class="bg-green-600 h-2 rounded-full" style="width:${percent}%"></div>
                 </div>
+
                 <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">Sync Rate</span>
-                    <span class="font-medium">${this.stats.sync_rate ?? 0}%</span>
+                    <span>Sync Rate</span>
+                    <span>${s.sync_rate}%</span>
                 </div>
             </div>
         `;
     }
 
-    // ✅ Render users table with sync data access
+    // ---------------------------------------------------------
+    // USERS TABLE
+    // ---------------------------------------------------------
     renderUsersTable() {
         const container = document.getElementById('users-table-body');
         if (!container) return;
 
-        container.innerHTML = this.users.map(user => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 h-10 w-10 bg-blue-500 rounded-full flex items-center justify-center">
-                            <span class="text-white font-medium">${user.name.charAt(0).toUpperCase()}</span>
+        container.innerHTML = this.users
+            .map(
+                (u) => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 bg-blue-500 text-white rounded-full flex items-center justify-center">
+                                ${u.name[0].toUpperCase()}
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium">${u.name}</div>
+                                <div class="text-sm text-gray-500">${u.email}</div>
+                            </div>
                         </div>
-                        <div class="ml-4">
-                            <div class="text-sm font-medium text-gray-900">${user.name}</div>
-                            <div class="text-sm text-gray-500">${user.email}</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${user.phone || 'N/A'}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                        ${user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${user.performance_score}%
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${user.last_sync ? new Date(user.last_sync).toLocaleDateString() : 'Never'}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onclick="adminDashboard.viewUserData(${user.id})" class="text-blue-600 hover:text-blue-900 mr-3">
-                        <i class="fas fa-database mr-1"></i>View Data
-                    </button>
-                    <button onclick="adminDashboard.editUser(${user.id})" class="text-indigo-600 hover:text-indigo-900 mr-3">
-                        <i class="fas fa-edit mr-1"></i>Edit
-                    </button>
-                    <button onclick="adminDashboard.deleteUser(${user.id})" class="text-red-600 hover:text-red-900">
-                        <i class="fas fa-trash mr-1"></i>Delete
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+                    </td>
+                    <td class="px-6 py-4">${u.phone || "N/A"}</td>
+
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded-full text-xs ${
+                            u.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        }">
+                            ${u.is_active ? "Active" : "Inactive"}
+                        </span>
+                    </td>
+
+                    <td class="px-6 py-4">${u.performance_score}%</td>
+
+                    <td class="px-6 py-4">
+                        ${u.last_sync ? new Date(u.last_sync).toLocaleDateString() : "Never"}
+                    </td>
+
+                    <td class="px-6 py-4 text-right">
+                        <button class="text-blue-600 mr-2" onclick="adminDashboard.viewUserData(${u.id})">
+                            <i class="fas fa-database"></i> View
+                        </button>
+                        <button class="text-indigo-600 mr-2" onclick="adminDashboard.editUser(${u.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="text-red-600" onclick="adminDashboard.deleteUser(${u.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </td>
+                </tr>
+            `
+            )
+            .join("");
     }
 
-    // ✅ Fetch and display user app data
+    // ---------------------------------------------------------
+    // VIEW USER DATA (FIXED API PATH)
+    // ---------------------------------------------------------
     async viewUserData(userId) {
         try {
-            const user = this.users.find(u => u.id === userId);
-            if (!user) return;
-
             const response = await auth.makeAuthenticatedRequest(`/admin/user-data/${userId}`);
             const data = await response.json();
-            
+
             if (!response.ok) {
-                auth.showNotification(data.error || 'Failed to load user data', 'error');
+                auth.showNotification(data.error || "Failed to load user data", "error");
                 return;
             }
 
-            this.renderUserDataModal(user, data);
-        } catch (error) {
-            console.error('Error loading user data:', error);
-            auth.showNotification('Error loading user data', 'error');
+            this.renderUserDataModal(
+                this.users.find((u) => u.id === userId),
+                data
+            );
+        } catch (err) {
+            console.error(err);
+            auth.showNotification("Error loading user data", "error");
         }
     }
 
-    // ✅ Render user data in modal
+    // ---------------------------------------------------------
+    // MODAL RENDER
+    // ---------------------------------------------------------
     renderUserDataModal(user, data) {
-        const modal = document.getElementById('user-data-modal');
-        const content = document.getElementById('user-data-content');
-        
+        const modal = document.getElementById("user-data-modal");
+        const content = document.getElementById("user-data-content");
+
         if (!modal || !content) return;
 
-        // Analytics data
-        const analytics = data.analytics || {};
-        const callHistory = data.call_history || [];
-        const attendance = data.attendance || {};
-        const contacts = data.contacts || [];
-
         content.innerHTML = `
-            <div class="bg-white rounded-lg">
-                <!-- Header -->
-                <div class="border-b border-gray-200 px-6 py-4">
-                    <h3 class="text-lg font-medium text-gray-900">User Data: ${user.name}</h3>
-                    <p class="text-sm text-gray-500">Last sync: ${data.last_sync ? new Date(data.last_sync).toLocaleString() : 'Never'}</p>
+            <div class="p-6">
+                <h2 class="text-xl font-bold">${user.name}</h2>
+                <p class="text-sm text-gray-500">Last Sync: ${
+                    data.last_sync
+                        ? new Date(data.last_sync).toLocaleString()
+                        : "Never"
+                }</p>
+
+                <div class="mt-4">
+                    <h3 class="font-semibold">Analytics</h3>
+                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(
+                        data.analytics,
+                        null,
+                        2
+                    )}</pre>
                 </div>
 
-                <!-- Analytics -->
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h4 class="font-medium text-gray-900 mb-3">Analytics</h4>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="text-center p-3 bg-blue-50 rounded-lg">
-                            <div class="text-2xl font-bold text-blue-600">${analytics.total_calls || 0}</div>
-                            <div class="text-sm text-blue-800">Total Calls</div>
-                        </div>
-                        <div class="text-center p-3 bg-green-50 rounded-lg">
-                            <div class="text-2xl font-bold text-green-600">${analytics.meetings_attended || 0}</div>
-                            <div class="text-sm text-green-800">Meetings</div>
-                        </div>
-                    </div>
+                <div class="mt-4">
+                    <h3 class="font-semibold">Call History (${data.call_history?.length})</h3>
+                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(
+                        data.call_history,
+                        null,
+                        2
+                    )}</pre>
                 </div>
 
-                <!-- Call History -->
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h4 class="font-medium text-gray-900 mb-3">Call History (${callHistory.length})</h4>
-                    <div class="max-h-40 overflow-y-auto">
-                        ${callHistory.length > 0 ? callHistory.map(call => `
-                            <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                                <div>
-                                    <div class="font-medium">${call.number || 'Unknown'}</div>
-                                    <div class="text-sm text-gray-500">${call.type || 'N/A'} - ${call.duration || 0}s</div>
-                                </div>
-                                <div class="text-sm text-gray-500">
-                                    ${call.timestamp ? new Date(call.timestamp).toLocaleDateString() : 'N/A'}
-                                </div>
-                            </div>
-                        `).join('') : '<p class="text-gray-500 text-center py-2">No call history</p>'}
-                    </div>
-                </div>
-
-                <!-- Contacts -->
-                <div class="px-6 py-4">
-                    <h4 class="font-medium text-gray-900 mb-3">Contacts (${contacts.length})</h4>
-                    <div class="max-h-40 overflow-y-auto">
-                        ${contacts.length > 0 ? contacts.map(contact => `
-                            <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                                <div class="font-medium">${contact.name || 'Unknown'}</div>
-                                <div class="text-sm text-gray-500">${contact.phone || 'N/A'}</div>
-                            </div>
-                        `).join('') : '<p class="text-gray-500 text-center py-2">No contacts</p>'}
-                    </div>
+                <div class="mt-4">
+                    <h3 class="font-semibold">Contacts (${data.contacts?.length})</h3>
+                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(
+                        data.contacts,
+                        null,
+                        2
+                    )}</pre>
                 </div>
             </div>
         `;
 
-        // Show modal
-        modal.classList.remove('hidden');
+        modal.classList.remove("hidden");
     }
 
-    // ✅ Close user data modal
     closeUserDataModal() {
-        const modal = document.getElementById('user-data-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
+        const modal = document.getElementById("user-data-modal");
+        if (modal) modal.classList.add("hidden");
     }
 
-    // ✅ Navigation section switching
+    // ---------------------------------------------------------
+    // NAVIGATION
+    // ---------------------------------------------------------
     setupNavigation() {
-        const navItems = document.querySelectorAll('.nav-item');
-        const pageTitle = document.getElementById('page-title');
-        const pageSubtitle = document.getElementById('page-subtitle');
+        const items = document.querySelectorAll(".nav-item");
+        const title = document.getElementById("page-title");
+        const subtitle = document.getElementById("page-subtitle");
 
         const pages = {
             dashboard: {
-                title: 'Admin Dashboard',
-                subtitle: 'Manage your users and track performance',
-                section: 'dashboard-section'
+                title: "Admin Dashboard",
+                subtitle: "Manage your users and track performance",
+                section: "dashboard-section",
             },
             users: {
-                title: 'Manage Users',
-                subtitle: 'Add, edit, and manage user accounts',
-                section: 'users-section'
+                title: "Manage Users",
+                subtitle: "Add, edit, and manage user accounts",
+                section: "users-section",
             },
             performance: {
-                title: 'Performance Analytics',
-                subtitle: 'Monitor and analyze user performance data',
-                section: 'performance-section'
-            }
+                title: "Performance Analytics",
+                subtitle: "Monitor performance data",
+                section: "performance-section",
+            },
         };
 
-        navItems.forEach(item => {
-            item.addEventListener('click', (e) => {
+        items.forEach((item) => {
+            item.addEventListener("click", (e) => {
                 e.preventDefault();
-                navItems.forEach(nav => nav.classList.remove('active'));
-                item.classList.add('active');
 
-                const target = item.getAttribute('href').substring(1);
+                items.forEach((n) => n.classList.remove("active"));
+                item.classList.add("active");
+
+                const target = item.getAttribute("href").replace("#", "");
                 const page = pages[target];
 
                 if (page) {
                     this.currentSection = target;
-                    pageTitle.textContent = page.title;
-                    pageSubtitle.textContent = page.subtitle;
+                    title.textContent = page.title;
+                    subtitle.textContent = page.subtitle;
                     this.showSection(target);
                 }
             });
         });
     }
 
-    // ✅ Show/hide sections dynamically
     showSection(section) {
-        const sections = ['dashboard', 'users', 'performance'];
-        sections.forEach(sec => {
+        const sections = ["dashboard", "users", "performance"];
+
+        sections.forEach((sec) => {
             const el = document.getElementById(`${sec}-section`);
-            if (el) el.style.display = 'none';
+            if (el) el.style.display = "none";
         });
 
-        const targetEl = document.getElementById(`${section}-section`);
-        if (targetEl) targetEl.style.display = 'block';
-
-        if (section === 'users' && this.users.length === 0) {
-            this.loadUsers();
-        }
+        const active = document.getElementById(`${section}-section`);
+        if (active) active.style.display = "block";
     }
 
-    // ✅ Logout handling
+    // ---------------------------------------------------------
+    // LOGOUT
+    // ---------------------------------------------------------
     setupLogout() {
-        const logoutBtn = document.getElementById('logout-btn');
-        if (!logoutBtn) return;
+        const btn = document.getElementById("logout-btn");
+        if (!btn) return;
 
-        logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            sessionStorage.removeItem('admin_token');
-            sessionStorage.removeItem('admin_user');
-            auth.showNotification('Logged out successfully', 'success');
+        btn.addEventListener("click", () => {
+            sessionStorage.removeItem("admin_token");
+            sessionStorage.removeItem("admin_user");
+
+            auth.showNotification("Logged out", "success");
+
             setTimeout(() => {
-                window.location.href = '/admin/login.html';
-            }, 1000);
+                window.location.href = "/admin/login.html";
+            }, 600);
         });
     }
 
+    // ---------------------------------------------------------
+    // MODAL LISTENERS
+    // ---------------------------------------------------------
     setupEventListeners() {
-        // Close modal when clicking outside
-        const modal = document.getElementById('user-data-modal');
+        const modal = document.getElementById("user-data-modal");
+        const closeBtn = document.getElementById("close-user-data-modal");
+
+        if (closeBtn) {
+            closeBtn.addEventListener("click", () => this.closeUserDataModal());
+        }
+
         if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeUserDataModal();
-                }
+            modal.addEventListener("click", (e) => {
+                if (e.target === modal) this.closeUserDataModal();
             });
         }
-
-        // Close modal button
-        const closeBtn = document.getElementById('close-user-data-modal');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.closeUserDataModal());
-        }
-
-        console.log('✅ Admin Dashboard initialized successfully');
     }
 
-    // Placeholder methods for user management
-    editUser(userId) {
-        auth.showNotification('Edit user functionality coming soon', 'info');
+    // ---------------------------------------------------------
+    // PLACEHOLDERS
+    // ---------------------------------------------------------
+    editUser() {
+        auth.showNotification("Edit user feature coming soon", "info");
     }
 
-    deleteUser(userId) {
-        if (confirm('Are you sure you want to delete this user?')) {
-            auth.showNotification('Delete user functionality coming soon', 'info');
-        }
+    deleteUser() {
+        auth.showNotification("Delete user feature coming soon", "info");
     }
 }
 
-// Global instance
-const adminDashboard = new AdminDashboard();
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Modal close handler
-    const closeBtn = document.getElementById('close-user-data-modal');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => adminDashboard.closeUserDataModal());
-    }
-});
+// Attach instance globally
+window.adminDashboard = new AdminDashboard();

@@ -2,159 +2,220 @@ class AuthAdmin {
     constructor() {
         this.token = null;
         this.currentUser = null;
-        this.apiBaseUrl = '/api'; // ✅ Always use relative API path, works on Render & localhost
 
-        // Decide whether to show login or dashboard
-        if (window.location.pathname === '/admin/login.html' || window.location.pathname.endsWith('/admin/login')) {
+        // Works on localhost + Render + Railway
+        this.apiBaseUrl = '/api';
+
+        // Normalize path for safe checking
+        this.currentPath = window.location.pathname.replace(/\/+$/, "");
+
+        // Decide login or dashboard
+        if (this.isLoginPage()) {
             this.initLogin();
         } else {
             this.checkAuthentication();
         }
     }
 
-    // ✅ Initialize login page listeners
+    // ---------------------------------------------------------
+    // PAGE MATCHING HELPERS
+    // ---------------------------------------------------------
+
+    isLoginPage() {
+        return (
+            this.currentPath === "/admin/login" ||
+            this.currentPath === "/admin/login.html" ||
+            this.currentPath.endsWith("/admin/login") ||
+            this.currentPath.endsWith("/admin/login.html")
+        );
+    }
+
+    isDashboardPage() {
+        return (
+            this.currentPath === "/admin" ||
+            this.currentPath === "/admin/" ||
+            this.currentPath.endsWith("/admin/index.html")
+        );
+    }
+
+    // ---------------------------------------------------------
+    // LOGIN PAGE INITIALIZATION
+    // ---------------------------------------------------------
+
     initLogin() {
-        const loginForm = document.getElementById('loginForm');
+        const loginForm = document.getElementById("loginForm");
+
         if (loginForm) {
-            loginForm.addEventListener('submit', (e) => {
+            loginForm.addEventListener("submit", (e) => {
                 e.preventDefault();
                 this.handleLogin();
             });
         }
 
-        // Auto-redirect if already logged in
-        this.token = sessionStorage.getItem('admin_token');
+        // Auto redirect if already logged in
+        this.token = sessionStorage.getItem("admin_token");
         if (this.token) {
-            window.location.href = '/admin';
+            window.location.href = "/admin";
         }
     }
 
-    // ✅ Handle login form submission
+    // ---------------------------------------------------------
+    // LOGIN HANDLER
+    // ---------------------------------------------------------
+
     async handleLogin() {
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value.trim();
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value.trim();
         const submitBtn = document.querySelector('#loginForm button[type="submit"]');
 
         const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span> Signing In...</span>';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
         submitBtn.disabled = true;
 
         try {
             const response = await fetch(`${this.apiBaseUrl}/admin/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
             });
 
             const data = await response.json();
 
-            if (response.ok) {
-                this.token = data.access_token;
-                this.currentUser = data.user;
-
-                // Save login data
-                sessionStorage.setItem('admin_token', this.token);
-                sessionStorage.setItem('admin_user', JSON.stringify(this.currentUser));
-
-                // Redirect to admin dashboard
-                window.location.href = '/admin';
-            } else {
-                this.showNotification(data.error || 'Invalid credentials', 'error');
+            if (!response.ok) {
+                this.showNotification(data.error || "Invalid credentials", "error");
+                return;
             }
+
+            // Save token & user info
+            this.token = data.access_token;
+            this.currentUser = data.user;
+
+            sessionStorage.setItem("admin_token", this.token);
+            sessionStorage.setItem("admin_user", JSON.stringify(this.currentUser));
+
+            // Redirect
+            window.location.href = "/admin";
+
         } catch (error) {
-            console.error('Login error:', error);
-            this.showNotification('Network error. Please try again.', 'error');
+            console.error("Login error:", error);
+            this.showNotification("Network error. Please try again.", "error");
+
         } finally {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }
     }
 
-    // ✅ Check authentication before showing dashboard
+    // ---------------------------------------------------------
+    // AUTH CHECK FOR DASHBOARD
+    // ---------------------------------------------------------
+
     checkAuthentication() {
-        this.token = sessionStorage.getItem('admin_token');
-        this.currentUser = JSON.parse(sessionStorage.getItem('admin_user') || 'null');
+        try {
+            this.token = sessionStorage.getItem("admin_token");
+            this.currentUser = JSON.parse(sessionStorage.getItem("admin_user") || "null");
+        } catch {
+            this.token = null;
+            this.currentUser = null;
+        }
 
         if (!this.token || !this.currentUser) {
-            window.location.href = '/admin/login.html';
+            window.location.href = "/admin/login.html";
             return;
         }
 
-        this.initDashboard();
+        if (this.isDashboardPage()) {
+            this.initDashboard();
+        }
     }
 
-    // ✅ Initialize dashboard (show name, bind logout)
+    // ---------------------------------------------------------
+    // DASHBOARD INITIALIZATION
+    // ---------------------------------------------------------
+
     initDashboard() {
-        const adminNameElement = document.getElementById('current-admin-name');
+        const adminNameElement = document.getElementById("current-admin-name");
         if (adminNameElement && this.currentUser) {
             adminNameElement.textContent = this.currentUser.name;
         }
 
-        const logoutBtn = document.getElementById('logout-btn');
+        const logoutBtn = document.getElementById("logout-btn");
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.logout());
+            logoutBtn.addEventListener("click", () => this.logout());
         }
     }
 
-    // ✅ Logout
+    // ---------------------------------------------------------
+    // LOGOUT
+    // ---------------------------------------------------------
+
     logout() {
-        sessionStorage.removeItem('admin_token');
-        sessionStorage.removeItem('admin_user');
-        this.showNotification('Logged out successfully', 'success');
+        sessionStorage.removeItem("admin_token");
+        sessionStorage.removeItem("admin_user");
+
+        this.showNotification("Logged out successfully", "success");
+
         setTimeout(() => {
-            window.location.href = '/admin/login.html';
-        }, 800);
+            window.location.href = "/admin/login.html";
+        }, 700);
     }
 
-    // ✅ Make API calls with JWT
+    // ---------------------------------------------------------
+    // AUTHENTICATED API REQUESTS
+    // ---------------------------------------------------------
+
     async makeAuthenticatedRequest(url, options = {}) {
         if (!this.token) {
-            this.checkAuthentication();
-            throw new Error('Not authenticated');
+            this.logout();
+            throw new Error("Not authenticated");
         }
 
-        const defaultOptions = {
-            headers: {
-                'Authorization': `Bearer ${this.token}`,
-                'Content-Type': 'application/json',
-                ...options.headers,
-            },
-        };
-
         const response = await fetch(`${this.apiBaseUrl}${url}`, {
-            ...defaultOptions,
             ...options,
+            headers: {
+                "Authorization": `Bearer ${this.token}`,
+                "Content-Type": "application/json",
+                ...(options.headers || {}),
+            },
         });
 
+        // Token expired
         if (response.status === 401) {
             this.logout();
-            throw new Error('Authentication expired');
+            throw new Error("Authentication expired");
         }
 
         return response;
     }
 
-    // ✅ Custom notification UI
-    showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-transform duration-300 ${
-            type === 'error' ? 'bg-red-500 text-white' :
-            type === 'success' ? 'bg-green-500 text-white' :
-            'bg-blue-500 text-white'
-        }`;
+    // ---------------------------------------------------------
+    // NOTIFICATION POPUP
+    // ---------------------------------------------------------
 
-        notification.innerHTML = `
-            <div class="flex items-center space-x-3">
-                <i class="fas fa-${type === 'error' ? 'exclamation-triangle' :
-                    type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+    showNotification(message, type = "info") {
+        const box = document.createElement("div");
+
+        box.className = `
+            fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white 
+            transition-all duration-300 transform
+            ${type === "error" ? "bg-red-500" :
+               type === "success" ? "bg-green-500" :
+               "bg-blue-500"}
+        `;
+
+        box.innerHTML = `
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-${type === "error" ? "exclamation-circle" :
+                   type === "success" ? "check-circle" : "info-circle"}"></i>
                 <span>${message}</span>
             </div>
         `;
 
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 4000);
+        document.body.appendChild(box);
+
+        setTimeout(() => box.remove(), 3500);
     }
 }
 
-// ✅ Initialize authentication on page load
+// Initialize on page load
 const auth = new AuthAdmin();

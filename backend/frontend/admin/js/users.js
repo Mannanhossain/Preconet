@@ -1,6 +1,7 @@
 class UsersManager {
     constructor() {
         this.users = [];
+        window.usersManager = this; // make globally accessible
         this.init();
     }
 
@@ -8,6 +9,9 @@ class UsersManager {
         this.setupCreateUserForm();
     }
 
+    // ---------------------------------------------------------
+    // CREATE USER FORM LISTENER
+    // ---------------------------------------------------------
     setupCreateUserForm() {
         const form = document.getElementById('createUserForm');
         if (form) {
@@ -18,17 +22,23 @@ class UsersManager {
         }
     }
 
-    // ✅ Create new user
+    // ---------------------------------------------------------
+    // CREATE USER
+    // ---------------------------------------------------------
     async createUser() {
-        const formData = {
-            name: document.getElementById('userName').value.trim(),
-            email: document.getElementById('userEmail').value.trim(),
-            phone: document.getElementById('userPhone').value.trim(),
-            password: document.getElementById('userPassword').value.trim() || '123456'
-        };
+        const name = document.getElementById('userName').value.trim();
+        const email = document.getElementById('userEmail').value.trim();
+        const phone = document.getElementById('userPhone').value.trim();
+        const password = document.getElementById('userPassword').value.trim() || '123456';
+
+        if (!name || !email) {
+            auth.showNotification('Name & Email are required', 'error');
+            return;
+        }
+
+        const formData = { name, email, phone, password };
 
         try {
-            // ✅ FIXED URL
             const response = await auth.makeAuthenticatedRequest('/admin/create-user', {
                 method: 'POST',
                 body: JSON.stringify(formData)
@@ -37,30 +47,28 @@ class UsersManager {
             const data = await response.json();
 
             if (response.ok) {
-                auth.showNotification('✅ User created successfully!', 'success');
+                auth.showNotification('User created successfully!', 'success');
                 document.getElementById('createUserForm').reset();
-                await this.loadUsers();
 
-                // Reload dashboard stats
-                if (typeof adminDashboard !== 'undefined') {
-                    await adminDashboard.loadStats();
-                }
+                await this.loadUsers();
+                if (window.adminDashboard) await adminDashboard.loadStats();
             } else {
                 auth.showNotification(data.error || 'Failed to create user', 'error');
             }
         } catch (error) {
-            console.error('Error creating user:', error);
-            auth.showNotification('Error creating user account', 'error');
+            console.error(error);
+            auth.showNotification('Error creating user', 'error');
         }
     }
 
-    // ✅ Load all users
+    // ---------------------------------------------------------
+    // LOAD USERS
+    // ---------------------------------------------------------
     async loadUsers() {
         try {
-            // ✅ FIXED URL
             const response = await auth.makeAuthenticatedRequest('/admin/users');
             const data = await response.json();
-            
+
             if (response.ok && Array.isArray(data.users)) {
                 this.users = data.users;
                 this.renderUsers();
@@ -68,12 +76,14 @@ class UsersManager {
                 auth.showNotification('Failed to load users', 'error');
             }
         } catch (error) {
-            console.error('Error loading users:', error);
-            auth.showNotification('Error loading users list', 'error');
+            console.error(error);
+            auth.showNotification('Error loading users', 'error');
         }
     }
 
-    // ✅ Render users in table
+    // ---------------------------------------------------------
+    // RENDER USERS IN TABLE
+    // ---------------------------------------------------------
     renderUsers() {
         const tableBody = document.getElementById('users-table-body');
         if (!tableBody) return;
@@ -91,7 +101,7 @@ class UsersManager {
         }
 
         tableBody.innerHTML = this.users.map(user => `
-            <tr class="hover:bg-gray-50 transition-colors">
+            <tr class="hover:bg-gray-50 transition">
                 <td class="px-4 py-4">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -103,15 +113,18 @@ class UsersManager {
                         </div>
                     </div>
                 </td>
+
                 <td class="px-4 py-4 text-sm text-gray-900">${user.phone || 'N/A'}</td>
+
                 <td class="px-4 py-4">
                     <div class="flex items-center space-x-2">
-                        <div class="w-16 bg-gray-200 rounded-full h-2">
+                        <div class="w-16 bg-gray-200 h-2 rounded-full">
                             <div class="bg-blue-600 h-2 rounded-full" style="width: ${(user.performance_score || 0)}%"></div>
                         </div>
-                        <span class="text-sm font-medium text-gray-700">${user.performance_score || 0}%</span>
+                        <span class="text-sm font-medium">${user.performance_score || 0}%</span>
                     </div>
                 </td>
+
                 <td class="px-4 py-4">
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                         user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -120,12 +133,16 @@ class UsersManager {
                         ${user.is_active ? 'Active' : 'Inactive'}
                     </span>
                 </td>
+
                 <td class="px-4 py-4">
                     <div class="flex items-center space-x-2">
-                        <button class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" onclick="usersManager.editUser(${user.id})">
+                        <button onclick="usersManager.editUser(${user.id})"
+                            class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" onclick="usersManager.deleteUser(${user.id})">
+
+                        <button onclick="usersManager.deleteUser(${user.id})"
+                            class="p-2 text-red-600 hover:bg-red-50 rounded-lg">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -134,19 +151,20 @@ class UsersManager {
         `).join('');
     }
 
-    // 🧩 Edit user (future implementation)
-    async editUser(userId) {
-        auth.showNotification('Edit feature coming soon!', 'info');
+    // ---------------------------------------------------------
+    // EDIT USER
+    // ---------------------------------------------------------
+    async editUser() {
+        auth.showNotification("Edit user functionality coming soon!", "info");
     }
 
-    // ✅ Delete user
+    // ---------------------------------------------------------
+    // DELETE USER
+    // ---------------------------------------------------------
     async deleteUser(userId) {
-        if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            return;
-        }
+        if (!confirm('Are you sure you want to delete this user?')) return;
 
         try {
-            // ✅ FIXED URL
             const response = await auth.makeAuthenticatedRequest(`/admin/delete-user/${userId}`, {
                 method: 'DELETE'
             });
@@ -154,17 +172,14 @@ class UsersManager {
             const data = await response.json();
 
             if (response.ok) {
-                auth.showNotification('✅ User deleted successfully!', 'success');
+                auth.showNotification('User deleted successfully!', 'success');
                 await this.loadUsers();
-
-                if (typeof adminDashboard !== 'undefined') {
-                    await adminDashboard.loadStats();
-                }
+                if (window.adminDashboard) await adminDashboard.loadStats();
             } else {
                 auth.showNotification(data.error || 'Failed to delete user', 'error');
             }
         } catch (error) {
-            console.error('Error deleting user:', error);
+            console.error(error);
             auth.showNotification('Error deleting user', 'error');
         }
     }
