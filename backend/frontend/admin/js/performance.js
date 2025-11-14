@@ -6,8 +6,8 @@ class PerformanceManager {
     // ✅ Load all user performance data
     async loadPerformance() {
         try {
-            // ✅ FIXED: Added '/api' prefix
-            const response = await auth.makeAuthenticatedRequest('/api/admin/users');
+            // ✅ FIXED URL (removed extra /api)
+            const response = await auth.makeAuthenticatedRequest('/admin/users');
             const data = await response.json();
 
             if (response.ok && Array.isArray(data.users)) {
