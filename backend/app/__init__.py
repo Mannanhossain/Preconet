@@ -1,9 +1,10 @@
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_cors import CORS
-from .models import db, bcrypt
+from app.models import db, bcrypt, SuperAdmin
 from config import Config
+from sqlalchemy import inspect
 import os
 
 jwt = JWTManager()
@@ -21,15 +22,35 @@ def create_app(config_class=Config):
     CORS(app)
 
     # ✅ Register blueprints FIRST (before static routes)
-    from .routes import super_admin, admin, users
+    from app.routes import super_admin, admin, users
     app.register_blueprint(super_admin.bp)
     app.register_blueprint(admin.bp)
     app.register_blueprint(users.bp)
 
-    # ✅ Frontend folder now inside backend
+    # ✅ Create tables automatically if missing
+    with app.app_context():
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        if "super_admin" not in tables:
+            print("⚙️ Creating missing database tables...")
+            db.create_all()
+            print("✅ Tables created successfully!")
+
+            # ✅ Add default Super Admin
+            if not SuperAdmin.query.first():
+                super_admin = SuperAdmin(
+                    name="Super Admin",
+                    email="super@callmanager.com"
+                )
+                super_admin.set_password("admin123")
+                db.session.add(super_admin)
+                db.session.commit()
+                print("✅ Default Super Admin created: super@callmanager.com / admin123")
+
+    # ✅ Frontend folder path
     FRONTEND_PATH = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 
-    # ✅ Test route - check if API is working
+    # ✅ Root route - API welcome
     @app.route('/')
     def home():
         return jsonify({
@@ -38,16 +59,18 @@ def create_app(config_class=Config):
             "endpoints": {
                 "health": "/api/health",
                 "admin_login": "/api/admin/login",
-                "super_admin_login": "/api/superadmin/login"
+                "super_admin_login": "/api/superadmin/login",
+                "admin_dashboard": "/admin",
+                "super_admin_dashboard": "/super_admin"
             }
         })
 
-    # ✅ Health check
-    @app.route('/api/health')
+    # ✅ Health check route
+    @app.route("/api/health")
     def health():
         return jsonify({
             "status": "running",
-            "message": "✅ Flask backend is healthy!"
+            "message": "✅ Flask backend connected and healthy!"
         }), 200
 
     # ✅ Serve super_admin dashboard - ONLY specific files
