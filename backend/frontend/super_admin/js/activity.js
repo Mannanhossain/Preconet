@@ -5,7 +5,8 @@ class ActivityManager {
 
     async loadActivity() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/superadmin/logs?per_page=50');
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest('/api/superadmin/logs?per_page=50');
             const data = await response.json();
             
             if (response.ok) {
