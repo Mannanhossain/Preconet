@@ -35,7 +35,12 @@ class AdminDashboard {
     // ---------------------------------------------------------
     async loadStats() {
         try {
+<<<<<<< HEAD
             const response = await auth.makeAuthenticatedRequest('/admin/dashboard-stats');
+=======
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest('/api/admin/dashboard-stats');
+>>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9
             const data = await response.json();
 
             if (response.ok && data.stats) {
@@ -56,7 +61,8 @@ class AdminDashboard {
     // ---------------------------------------------------------
     async loadUsers() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/admin/users');
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest('/api/admin/users');
             const data = await response.json();
 
             if (response.ok && data.users) {
@@ -228,7 +234,15 @@ class AdminDashboard {
     // ---------------------------------------------------------
     async viewUserData(userId) {
         try {
+<<<<<<< HEAD
             const response = await auth.makeAuthenticatedRequest(`/admin/user-data/${userId}`);
+=======
+            const user = this.users.find(u => u.id === userId);
+            if (!user) return;
+
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest(`/api/admin/user-data/${userId}`);
+>>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9
             const data = await response.json();
 
             if (!response.ok) {
@@ -408,5 +422,18 @@ class AdminDashboard {
     }
 }
 
+<<<<<<< HEAD
 // Attach instance globally
 window.adminDashboard = new AdminDashboard();
+=======
+// Global instance
+const adminDashboard = new AdminDashboard();
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Modal close handler
+    const closeBtn = document.getElementById('close-user-data-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => adminDashboard.closeUserDataModal());
+    }
+});
+>>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9

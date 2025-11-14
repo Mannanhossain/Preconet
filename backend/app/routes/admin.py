@@ -82,6 +82,10 @@ def create_user():
 
         data = request.get_json()
 
+<<<<<<< HEAD
+=======
+        # Validation
+>>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9
         required_fields = ['name', 'email', 'password']
         for field in required_fields:
             if not data.get(field):
@@ -91,7 +95,11 @@ def create_user():
         if not validate_email(data['email']):
             return jsonify({'error': 'Invalid email format'}), 400
 
+<<<<<<< HEAD
         if User.query.filter_by(email=data['email']).first():
+=======
+        if User.query.filter_by(email=data.get('email')).first():
+>>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9
             return jsonify({'error': 'Email already exists'}), 400
 
         user = User(
