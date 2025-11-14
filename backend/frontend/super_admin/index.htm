@@ -56,7 +56,7 @@
                     <p class="text-sm font-medium text-gray-800" id="current-admin-name">Super Admin</p>
                     <p class="text-xs text-gray-500">Active</p>
                 </div>
-                <button id="logout-btn" class="text-gray-400 hover:text-red-500 transition-colors">
+                <button id="logout-btn" class="text-gray-400 hover:text-red-500 transition-colors" title="Logout">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
             </div>
@@ -72,12 +72,10 @@
                     <h2 class="text-2xl font-bold text-gray-800" id="page-title">Dashboard Overview</h2>
                     <p class="text-gray-600" id="page-subtitle">Welcome back! Here's your system overview.</p>
                 </div>
+
+                <!-- 🚀 Added Logout Button in Header -->
                 <div class="flex items-center space-x-3">
-                    <button id="export-csv-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
-                        <i class="fas fa-file-csv"></i>
-                        <span>Export CSV</span>
-                    </button>
-                    <button id="logout-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2">
+                    <button id="logout-btn-header" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Logout</span>
                     </button>
@@ -87,12 +85,11 @@
 
         <!-- Dashboard Content -->
         <div class="p-8">
-            <!-- Stats Grid -->
             <div id="stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <!-- Stats will be loaded here -->
             </div>
 
-            <!-- Main Content Grid -->
+            <!-- Main Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Create Admin Form -->
                 <div class="lg:col-span-2">
@@ -107,28 +104,28 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                                    <input type="text" id="adminName" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Enter full name" required>
+                                    <input type="text" id="adminName" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter full name" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                                    <input type="email" id="adminEmail" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Enter email" required>
+                                    <input type="email" id="adminEmail" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter email" required>
                                 </div>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                                    <input type="password" id="adminPassword" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Enter password" required>
+                                    <input type="password" id="adminPassword" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter password" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">User Limit</label>
-                                    <input type="number" id="userLimit" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="e.g., 50" min="1" required>
+                                    <input type="number" id="userLimit" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., 50" min="1" required>
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
-                                <input type="date" id="expiryDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+                                <input type="date" id="expiryDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
                             </div>
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2">
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg flex items-center justify-center space-x-2">
                                 <i class="fas fa-user-plus"></i>
                                 <span>Create Admin Account</span>
                             </button>
@@ -151,74 +148,33 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Admins Management Section -->
-            <div id="admins-section" class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6" style="display: none;">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-lg font-semibold text-gray-800">Administrators Management</h3>
-                    <div class="flex space-x-3">
-                        <button id="export-csv-btn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2">
-                            <i class="fas fa-file-csv"></i>
-                            <span>Export CSV</span>
-                        </button>
-                        <button onclick="adminsManager.loadAdmins()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
-                            <i class="fas fa-sync-alt"></i>
-                            <span>Refresh</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="bg-gray-50 border-b border-gray-200">
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admin</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Users</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admins-table-body" class="divide-y divide-gray-200">
-                            <!-- Admins will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Activity Logs Section -->
-            <div id="activity-section" class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6" style="display: none;">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-lg font-semibold text-gray-800">Activity Logs</h3>
-                    <div class="flex space-x-3">
-                        <button onclick="activityManager.loadActivity()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
-                            <i class="fas fa-sync-alt"></i>
-                            <span>Refresh</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="bg-gray-50 border-b border-gray-200">
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actor</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-                            </tr>
-                        </thead>
-                        <tbody id="activity-table-body" class="divide-y divide-gray-200">
-                            <!-- Activity logs will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- ✅ Correct JS Paths -->
-    <script src="js/auth.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/admins.js"></script>
-    <script src="js/activity.js"></script>
+    <!-- ✅ JS Scripts -->
+    <script src="/js/auth.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/admins.js"></script>
+    <script src="/js/activity.js"></script>
+
+    <!-- 🚀 Logout Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutBtnSidebar = document.getElementById('logout-btn');
+            const logoutBtnHeader = document.getElementById('logout-btn-header');
+
+            const logoutHandler = () => {
+                if (confirm('Are you sure you want to logout?')) {
+                    sessionStorage.removeItem('super_admin_token');
+                    sessionStorage.removeItem('super_admin_user');
+                    alert('You have been logged out successfully!');
+                    window.location.href = '/login.html';
+                }
+            };
+
+            if (logoutBtnSidebar) logoutBtnSidebar.addEventListener('click', logoutHandler);
+            if (logoutBtnHeader) logoutBtnHeader.addEventListener('click', logoutHandler);
+        });
+    </script>
 </body>
 </html>
