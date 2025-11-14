@@ -10,11 +10,13 @@ class SuperAdminDashboard {
         this.setupEventListeners();
     }
 
-    // ✅ Load Dashboard Statistics
+    // -------------------------------------------------------
+    // LOAD SUPER ADMIN DASHBOARD STATS
+    // -------------------------------------------------------
     async loadStats() {
         try {
-            // Fixed API endpoint ✅
-            const response = await auth.makeAuthenticatedRequest('/api/superadmin/dashboard-stats');
+            // FIXED: ❌ removed /api prefix (auth adds it automatically)
+            const response = await auth.makeAuthenticatedRequest('/superadmin/dashboard-stats');
             const data = await response.json();
 
             if (response.ok && data.stats) {
@@ -29,37 +31,39 @@ class SuperAdminDashboard {
         }
     }
 
-    // ✅ Render Dashboard Cards
+    // -------------------------------------------------------
+    // RENDER DASHBOARD INFO CARDS
+    // -------------------------------------------------------
     renderStats() {
         const statsContainer = document.getElementById('stats-cards');
         if (!statsContainer || !this.stats) return;
 
         const statsConfig = [
             { 
-                label: 'Total Admins', 
-                value: this.stats.total_admins ?? 0, 
-                icon: 'users-cog', 
+                label: 'Total Admins',
+                value: this.stats.total_admins ?? 0,
+                icon: 'users-cog',
                 bgColor: 'bg-blue-50',
                 textColor: 'text-blue-600'
             },
             { 
-                label: 'Total Users', 
-                value: this.stats.total_users ?? 0, 
-                icon: 'users', 
+                label: 'Total Users',
+                value: this.stats.total_users ?? 0,
+                icon: 'users',
                 bgColor: 'bg-green-50',
                 textColor: 'text-green-600'
             },
             { 
-                label: 'Active Admins', 
-                value: this.stats.active_admins ?? 0, 
-                icon: 'user-check', 
+                label: 'Active Admins',
+                value: this.stats.active_admins ?? 0,
+                icon: 'user-check',
                 bgColor: 'bg-green-50',
                 textColor: 'text-green-600'
             },
             { 
-                label: 'Expired Admins', 
-                value: this.stats.expired_admins ?? 0, 
-                icon: 'exclamation-triangle', 
+                label: 'Expired Admins',
+                value: this.stats.expired_admins ?? 0,
+                icon: 'exclamation-triangle',
                 bgColor: 'bg-red-50',
                 textColor: 'text-red-600'
             }
@@ -86,7 +90,9 @@ class SuperAdminDashboard {
         `).join('');
     }
 
-    // ✅ Handle Sidebar Navigation
+    // -------------------------------------------------------
+    // SIDEBAR NAVIGATION
+    // -------------------------------------------------------
     setupNavigation() {
         const navItems = document.querySelectorAll('.nav-item');
         const pageTitle = document.getElementById('page-title');
@@ -95,7 +101,7 @@ class SuperAdminDashboard {
         const pages = {
             dashboard: {
                 title: 'Dashboard Overview',
-                subtitle: 'Welcome back! Here\'s your system overview.',
+                subtitle: 'Welcome back! Here’s your system overview.',
                 section: 'dashboard-section'
             },
             admins: {
@@ -105,7 +111,7 @@ class SuperAdminDashboard {
             },
             activity: {
                 title: 'Activity Logs',
-                subtitle: 'Monitor system activities and events',
+                subtitle: 'Monitor system-wide activity',
                 section: 'activity-section'
             }
         };
@@ -113,7 +119,8 @@ class SuperAdminDashboard {
         navItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                navItems.forEach(nav => nav.classList.remove('active'));
+
+                navItems.forEach(n => n.classList.remove('active'));
                 item.classList.add('active');
 
                 const target = item.getAttribute('href').substring(1);
@@ -128,7 +135,9 @@ class SuperAdminDashboard {
         });
     }
 
-    // ✅ Handle Page Switching
+    // -------------------------------------------------------
+    // SECTION SWITCHING
+    // -------------------------------------------------------
     showSection(section) {
         const sections = ['dashboard', 'admins', 'activity'];
         sections.forEach(sec => {
@@ -136,33 +145,35 @@ class SuperAdminDashboard {
             if (el) el.style.display = 'none';
         });
 
-        const createAdminForm = document.querySelector('.lg\\:col-span-2');
-        const recentActivity = document.querySelector('.lg\\:col-span-1');
+        const form = document.querySelector('.lg\\:col-span-2');
+        const recent = document.querySelector('.lg\\:col-span-1');
 
         if (section === 'dashboard') {
-            if (createAdminForm) createAdminForm.style.display = 'block';
-            if (recentActivity) recentActivity.style.display = 'block';
+            if (form) form.style.display = 'block';
+            if (recent) recent.style.display = 'block';
         } else {
-            if (createAdminForm) createAdminForm.style.display = 'none';
-            if (recentActivity) recentActivity.style.display = 'none';
-            const targetSection = document.getElementById(`${section}-section`);
-            if (targetSection) targetSection.style.display = 'block';
+            if (form) form.style.display = 'none';
+            if (recent) recent.style.display = 'none';
         }
 
-        // Load extra data for specific sections
-        switch(section) {
-            case 'admins':
-                if (typeof adminsManager !== 'undefined') adminsManager.loadAdmins();
-                break;
-            case 'activity':
-                if (typeof activityManager !== 'undefined') activityManager.loadActivity();
-                break;
+        const targetSection = document.getElementById(`${section}-section`);
+        if (targetSection) targetSection.style.display = 'block';
+
+        // Load section-specific data
+        if (section === 'admins' && typeof adminsManager !== 'undefined') {
+            adminsManager.loadAdmins();
+        }
+
+        if (section === 'activity' && typeof activityManager !== 'undefined') {
+            activityManager.loadActivity();
         }
     }
 
-    // ✅ Event listeners for buttons or extra UI
+    // -------------------------------------------------------
+    // GENERAL UI EVENTS
+    // -------------------------------------------------------
     setupEventListeners() {
-        console.log('✅ Super Admin Dashboard initialized successfully');
+        console.log("SuperAdmin Dashboard Ready");
     }
 }
 

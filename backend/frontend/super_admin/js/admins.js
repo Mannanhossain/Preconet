@@ -6,8 +6,12 @@ class AdminsManager {
 
     init() {
         this.setupCreateAdminForm();
+        this.loadAdmins();   // ✅ Auto-load admins on page load
     }
 
+    // ---------------------------------------------
+    // CREATE ADMIN FORM SETUP
+    // ---------------------------------------------
     setupCreateAdminForm() {
         const form = document.getElementById('createAdminForm');
         if (form) {
@@ -17,26 +21,35 @@ class AdminsManager {
             });
         }
 
-        // Set minimum date to today
+        // Set minimum expiry date
         const expiryDate = document.getElementById('expiryDate');
         if (expiryDate) {
             const today = new Date().toISOString().split('T')[0];
             expiryDate.min = today;
-            // Set default to 30 days from today
+
+            // Default +30 days
             const futureDate = new Date();
             futureDate.setDate(futureDate.getDate() + 30);
             expiryDate.value = futureDate.toISOString().split('T')[0];
         }
     }
 
+    // ---------------------------------------------
+    // CREATE ADMIN
+    // ---------------------------------------------
     async createAdmin() {
         const formData = {
-            name: document.getElementById('adminName').value,
-            email: document.getElementById('adminEmail').value,
-            password: document.getElementById('adminPassword').value,
-            user_limit: parseInt(document.getElementById('userLimit').value),
+            name: document.getElementById('adminName').value.trim(),
+            email: document.getElementById('adminEmail').value.trim(),
+            password: document.getElementById('adminPassword').value.trim(),
+            user_limit: Number(document.getElementById('userLimit').value) || 10,
             expiry_date: document.getElementById('expiryDate').value
         };
+
+        if (!formData.name || !formData.email || !formData.password || !formData.expiry_date) {
+            auth.showNotification('Please fill all fields', 'error');
+            return;
+        }
 
         try {
             const response = await auth.makeAuthenticatedRequest('/superadmin/create-admin', {
@@ -48,14 +61,15 @@ class AdminsManager {
 
             if (response.ok) {
                 auth.showNotification('Admin created successfully!', 'success');
+
                 document.getElementById('createAdminForm').reset();
                 
-                // Reset expiry date to default
+                // Reset expiry date
                 const expiryDate = document.getElementById('expiryDate');
                 const futureDate = new Date();
                 futureDate.setDate(futureDate.getDate() + 30);
                 expiryDate.value = futureDate.toISOString().split('T')[0];
-                
+
                 this.loadAdmins();
             } else {
                 auth.showNotification(data.error || 'Failed to create admin', 'error');
@@ -66,13 +80,16 @@ class AdminsManager {
         }
     }
 
+    // ---------------------------------------------
+    // LOAD ADMIN LIST
+    // ---------------------------------------------
     async loadAdmins() {
         try {
             const response = await auth.makeAuthenticatedRequest('/superadmin/admins');
             const data = await response.json();
-            
+
             if (response.ok) {
-                this.admins = data.admins;
+                this.admins = data.admins || [];
                 this.renderAdmins();
             } else {
                 auth.showNotification('Failed to load admins', 'error');
@@ -83,6 +100,9 @@ class AdminsManager {
         }
     }
 
+    // ---------------------------------------------
+    // RENDER ADMIN TABLE
+    // ---------------------------------------------
     renderAdmins() {
         const tableBody = document.getElementById('admins-table-body');
         if (!tableBody) return;
@@ -112,13 +132,13 @@ class AdminsManager {
                         </div>
                     </div>
                 </td>
+
                 <td class="px-4 py-4">
-                    <div class="flex items-center space-x-2">
-                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                            ${admin.user_count}/${admin.user_limit} users
-                        </span>
-                    </div>
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                        ${admin.user_count}/${admin.user_limit} users
+                    </span>
                 </td>
+
                 <td class="px-4 py-4">
                     <div class="flex items-center space-x-2">
                         <i class="fas fa-calendar ${admin.is_expired ? 'text-red-500' : 'text-green-500'}"></i>
@@ -127,6 +147,7 @@ class AdminsManager {
                         </span>
                     </div>
                 </td>
+
                 <td class="px-4 py-4">
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                         !admin.is_active ? 'bg-red-100 text-red-800' :
@@ -134,15 +155,22 @@ class AdminsManager {
                         'bg-green-100 text-green-800'
                     }">
                         <i class="fas fa-circle mr-1 text-xs"></i>
-                        ${!admin.is_active ? 'Inactive' : admin.is_expired ? 'Expired' : 'Active'}
+                        ${
+                            !admin.is_active ? 'Inactive' :
+                            admin.is_expired ? 'Expired' : 'Active'
+                        }
                     </span>
                 </td>
+
                 <td class="px-4 py-4">
                     <div class="flex items-center space-x-2">
-                        <button class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" onclick="adminsManager.editAdmin(${admin.id})">
+                        <button class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            onclick="adminsManager.editAdmin(${admin.id})">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" onclick="adminsManager.deleteAdmin(${admin.id})">
+
+                        <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            onclick="adminsManager.deleteAdmin(${admin.id})">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -151,14 +179,18 @@ class AdminsManager {
         `).join('');
     }
 
+    // ---------------------------------------------
+    // PLACEHOLDER: EDIT ADMIN
+    // ---------------------------------------------
     async editAdmin(adminId) {
         auth.showNotification('Edit feature coming soon!', 'info');
     }
 
+    // ---------------------------------------------
+    // DELETE ADMIN
+    // ---------------------------------------------
     async deleteAdmin(adminId) {
-        if (!confirm('Are you sure you want to delete this admin? This action cannot be undone.')) {
-            return;
-        }
+        if (!confirm('Are you sure you want to delete this admin?')) return;
 
         try {
             const response = await auth.makeAuthenticatedRequest(`/superadmin/delete-admin/${adminId}`, {
