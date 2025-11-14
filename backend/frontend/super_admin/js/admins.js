@@ -39,7 +39,8 @@ class AdminsManager {
         };
 
         try {
-            const response = await auth.makeAuthenticatedRequest('/superadmin/create-admin', {
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest('/api/superadmin/create-admin', {
                 method: 'POST',
                 body: JSON.stringify(formData)
             });
@@ -68,7 +69,8 @@ class AdminsManager {
 
     async loadAdmins() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/superadmin/admins');
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest('/api/superadmin/admins');
             const data = await response.json();
             
             if (response.ok) {
@@ -161,7 +163,8 @@ class AdminsManager {
         }
 
         try {
-            const response = await auth.makeAuthenticatedRequest(`/superadmin/delete-admin/${adminId}`, {
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest(`/api/superadmin/delete-admin/${adminId}`, {
                 method: 'DELETE'
             });
 
