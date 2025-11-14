@@ -28,8 +28,8 @@ class UsersManager {
         };
 
         try {
-            // ✅ FIXED URL
-            const response = await auth.makeAuthenticatedRequest('/admin/create-user', {
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest('/api/admin/create-user', {
                 method: 'POST',
                 body: JSON.stringify(formData)
             });
@@ -57,8 +57,8 @@ class UsersManager {
     // ✅ Load all users
     async loadUsers() {
         try {
-            // ✅ FIXED URL
-            const response = await auth.makeAuthenticatedRequest('/admin/users');
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest('/api/admin/users');
             const data = await response.json();
             
             if (response.ok && Array.isArray(data.users)) {
@@ -146,8 +146,8 @@ class UsersManager {
         }
 
         try {
-            // ✅ FIXED URL
-            const response = await auth.makeAuthenticatedRequest(`/admin/delete-user/${userId}`, {
+            // ✅ FIXED: Added '/api' prefix
+            const response = await auth.makeAuthenticatedRequest(`/api/admin/delete-user/${userId}`, {
                 method: 'DELETE'
             });
 
