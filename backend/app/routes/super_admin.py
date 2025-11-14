@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identi
 from ..models import db, SuperAdmin, Admin, User, ActivityLog, UserRole
 from datetime import datetime
 
-bp = Blueprint('super_admin', __name__, url_prefix='/api/super_admin')
+bp = Blueprint('super_admin', __name__, url_prefix='/api/superadmin')
 
 
 # 🟢 REGISTER SUPER ADMIN (only one time)
