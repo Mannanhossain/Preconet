@@ -3,7 +3,7 @@ class AdminDashboard {
         this.stats = null;
         this.currentSection = 'dashboard';
         this.users = [];
-        window.adminDashboard = this; // ensure global access
+        window.adminDashboard = this; 
         this.init();
     }
 
@@ -18,9 +18,6 @@ class AdminDashboard {
         this.setupEventListeners();
     }
 
-    // ---------------------------------------------------------
-    // AUTH CHECK
-    // ---------------------------------------------------------
     checkAuth() {
         const token = sessionStorage.getItem('admin_token');
         if (!token) {
@@ -30,17 +27,9 @@ class AdminDashboard {
         return true;
     }
 
-    // ---------------------------------------------------------
-    // LOAD STATS (FIXED: Removed duplicate /api)
-    // ---------------------------------------------------------
     async loadStats() {
         try {
-<<<<<<< HEAD
-            const response = await auth.makeAuthenticatedRequest('/admin/dashboard-stats');
-=======
-            // ✅ FIXED: Added '/api' prefix
             const response = await auth.makeAuthenticatedRequest('/api/admin/dashboard-stats');
->>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9
             const data = await response.json();
 
             if (response.ok && data.stats) {
@@ -56,12 +45,8 @@ class AdminDashboard {
         }
     }
 
-    // ---------------------------------------------------------
-    // LOAD USERS (FIXED: Removed duplicate /api)
-    // ---------------------------------------------------------
     async loadUsers() {
         try {
-            // ✅ FIXED: Added '/api' prefix
             const response = await auth.makeAuthenticatedRequest('/api/admin/users');
             const data = await response.json();
 
@@ -77,9 +62,6 @@ class AdminDashboard {
         }
     }
 
-    // ---------------------------------------------------------
-    // RENDER DASHBOARD STATS
-    // ---------------------------------------------------------
     renderStats() {
         const container = document.getElementById('stats-cards');
         if (!container || !this.stats) return;
@@ -87,58 +69,27 @@ class AdminDashboard {
         const stats = this.stats;
 
         const items = [
-            {
-                label: "Total Users",
-                value: stats.total_users,
-                icon: "users",
-                bg: "bg-blue-50",
-                text: "text-blue-600"
-            },
-            {
-                label: "Active Users",
-                value: stats.active_users,
-                icon: "user-check",
-                bg: "bg-green-50",
-                text: "text-green-600"
-            },
-            {
-                label: "Users with Sync Data",
-                value: stats.users_with_sync,
-                icon: "sync",
-                bg: "bg-purple-50",
-                text: "text-purple-600"
-            },
-            {
-                label: "Remaining Slots",
-                value: stats.remaining_slots,
-                icon: "user-plus",
-                bg: "bg-orange-50",
-                text: "text-orange-600"
-            }
+            { label: "Total Users", value: stats.total_users, icon: "users", bg: "bg-blue-50", text: "text-blue-600" },
+            { label: "Active Users", value: stats.active_users, icon: "user-check", bg: "bg-green-50", text: "text-green-600" },
+            { label: "Users with Sync Data", value: stats.users_with_sync, icon: "sync", bg: "bg-purple-50", text: "text-purple-600" },
+            { label: "Remaining Slots", value: stats.remaining_slots, icon: "user-plus", bg: "bg-orange-50", text: "text-orange-600" }
         ];
 
-        container.innerHTML = items
-            .map(
-                (s) => `
-                <div class="stat-card bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition">
-                    <div class="flex justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600">${s.label}</p>
-                            <p class="text-3xl font-bold">${s.value}</p>
-                        </div>
-                        <div class="${s.bg} w-12 h-12 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-${s.icon} ${s.text} text-lg"></i>
-                        </div>
+        container.innerHTML = items.map(item => `
+            <div class="stat-card bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition">
+                <div class="flex justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">${item.label}</p>
+                        <p class="text-3xl font-bold">${item.value}</p>
+                    </div>
+                    <div class="${item.bg} w-12 h-12 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-${item.icon} ${item.text} text-lg"></i>
                     </div>
                 </div>
-            `
-            )
-            .join("");
+            </div>
+        `).join("");
     }
 
-    // ---------------------------------------------------------
-    // PERFORMANCE OVERVIEW
-    // ---------------------------------------------------------
     renderPerformanceOverview() {
         const container = document.getElementById('performance-chart');
         if (!container || !this.stats) return;
@@ -174,75 +125,49 @@ class AdminDashboard {
         `;
     }
 
-    // ---------------------------------------------------------
-    // USERS TABLE
-    // ---------------------------------------------------------
     renderUsersTable() {
         const container = document.getElementById('users-table-body');
         if (!container) return;
 
-        container.innerHTML = this.users
-            .map(
-                (u) => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4">
-                        <div class="flex items-center">
-                            <div class="h-10 w-10 bg-blue-500 text-white rounded-full flex items-center justify-center">
-                                ${u.name[0].toUpperCase()}
-                            </div>
-                            <div class="ml-4">
-                                <div class="text-sm font-medium">${u.name}</div>
-                                <div class="text-sm text-gray-500">${u.email}</div>
-                            </div>
+        container.innerHTML = this.users.map(u => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                    <div class="flex items-center">
+                        <div class="h-10 w-10 bg-blue-500 text-white rounded-full flex items-center justify-center">
+                            ${u.name[0].toUpperCase()}
                         </div>
-                    </td>
-                    <td class="px-6 py-4">${u.phone || "N/A"}</td>
-
-                    <td class="px-6 py-4">
-                        <span class="px-2 py-1 rounded-full text-xs ${
-                            u.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                        }">
-                            ${u.is_active ? "Active" : "Inactive"}
-                        </span>
-                    </td>
-
-                    <td class="px-6 py-4">${u.performance_score}%</td>
-
-                    <td class="px-6 py-4">
-                        ${u.last_sync ? new Date(u.last_sync).toLocaleDateString() : "Never"}
-                    </td>
-
-                    <td class="px-6 py-4 text-right">
-                        <button class="text-blue-600 mr-2" onclick="adminDashboard.viewUserData(${u.id})">
-                            <i class="fas fa-database"></i> View
-                        </button>
-                        <button class="text-indigo-600 mr-2" onclick="adminDashboard.editUser(${u.id})">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="text-red-600" onclick="adminDashboard.deleteUser(${u.id})">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </td>
-                </tr>
-            `
-            )
-            .join("");
+                        <div class="ml-4">
+                            <div class="text-sm font-medium">${u.name}</div>
+                            <div class="text-sm text-gray-500">${u.email}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4">${u.phone || "N/A"}</td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 rounded-full text-xs ${u.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}">
+                        ${u.is_active ? "Active" : "Inactive"}
+                    </span>
+                </td>
+                <td class="px-6 py-4">${u.performance_score}%</td>
+                <td class="px-6 py-4">${u.last_sync ? new Date(u.last_sync).toLocaleDateString() : "Never"}</td>
+                <td class="px-6 py-4 text-right">
+                    <button class="text-blue-600 mr-2" onclick="adminDashboard.viewUserData(${u.id})">
+                        <i class="fas fa-database"></i> View
+                    </button>
+                    <button class="text-indigo-600 mr-2" onclick="adminDashboard.editUser(${u.id})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="text-red-600" onclick="adminDashboard.deleteUser(${u.id})">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        `).join("");
     }
 
-    // ---------------------------------------------------------
-    // VIEW USER DATA (FIXED API PATH)
-    // ---------------------------------------------------------
     async viewUserData(userId) {
         try {
-<<<<<<< HEAD
-            const response = await auth.makeAuthenticatedRequest(`/admin/user-data/${userId}`);
-=======
-            const user = this.users.find(u => u.id === userId);
-            if (!user) return;
-
-            // ✅ FIXED: Added '/api' prefix
             const response = await auth.makeAuthenticatedRequest(`/api/admin/user-data/${userId}`);
->>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9
             const data = await response.json();
 
             if (!response.ok) {
@@ -250,19 +175,16 @@ class AdminDashboard {
                 return;
             }
 
-            this.renderUserDataModal(
-                this.users.find((u) => u.id === userId),
-                data
-            );
+            const user = this.users.find(u => u.id === userId);
+
+            this.renderUserDataModal(user, data);
+
         } catch (err) {
             console.error(err);
             auth.showNotification("Error loading user data", "error");
         }
     }
 
-    // ---------------------------------------------------------
-    // MODAL RENDER
-    // ---------------------------------------------------------
     renderUserDataModal(user, data) {
         const modal = document.getElementById("user-data-modal");
         const content = document.getElementById("user-data-content");
@@ -273,36 +195,22 @@ class AdminDashboard {
             <div class="p-6">
                 <h2 class="text-xl font-bold">${user.name}</h2>
                 <p class="text-sm text-gray-500">Last Sync: ${
-                    data.last_sync
-                        ? new Date(data.last_sync).toLocaleString()
-                        : "Never"
+                    data.last_sync ? new Date(data.last_sync).toLocaleString() : "Never"
                 }</p>
 
                 <div class="mt-4">
                     <h3 class="font-semibold">Analytics</h3>
-                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(
-                        data.analytics,
-                        null,
-                        2
-                    )}</pre>
+                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(data.analytics, null, 2)}</pre>
                 </div>
 
                 <div class="mt-4">
                     <h3 class="font-semibold">Call History (${data.call_history?.length})</h3>
-                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(
-                        data.call_history,
-                        null,
-                        2
-                    )}</pre>
+                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(data.call_history, null, 2)}</pre>
                 </div>
 
                 <div class="mt-4">
                     <h3 class="font-semibold">Contacts (${data.contacts?.length})</h3>
-                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(
-                        data.contacts,
-                        null,
-                        2
-                    )}</pre>
+                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(data.contacts, null, 2)}</pre>
                 </div>
             </div>
         `;
@@ -315,9 +223,6 @@ class AdminDashboard {
         if (modal) modal.classList.add("hidden");
     }
 
-    // ---------------------------------------------------------
-    // NAVIGATION
-    // ---------------------------------------------------------
     setupNavigation() {
         const items = document.querySelectorAll(".nav-item");
         const title = document.getElementById("page-title");
@@ -373,9 +278,6 @@ class AdminDashboard {
         if (active) active.style.display = "block";
     }
 
-    // ---------------------------------------------------------
-    // LOGOUT
-    // ---------------------------------------------------------
     setupLogout() {
         const btn = document.getElementById("logout-btn");
         if (!btn) return;
@@ -392,9 +294,6 @@ class AdminDashboard {
         });
     }
 
-    // ---------------------------------------------------------
-    // MODAL LISTENERS
-    // ---------------------------------------------------------
     setupEventListeners() {
         const modal = document.getElementById("user-data-modal");
         const closeBtn = document.getElementById("close-user-data-modal");
@@ -410,9 +309,6 @@ class AdminDashboard {
         }
     }
 
-    // ---------------------------------------------------------
-    // PLACEHOLDERS
-    // ---------------------------------------------------------
     editUser() {
         auth.showNotification("Edit user feature coming soon", "info");
     }
@@ -422,18 +318,5 @@ class AdminDashboard {
     }
 }
 
-<<<<<<< HEAD
-// Attach instance globally
-window.adminDashboard = new AdminDashboard();
-=======
 // Global instance
-const adminDashboard = new AdminDashboard();
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Modal close handler
-    const closeBtn = document.getElementById('close-user-data-modal');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => adminDashboard.closeUserDataModal());
-    }
-});
->>>>>>> 4b2e12c18a1bffe17e39079baebcf7e1428c68c9
+window.adminDashboard = new AdminDashboard();
