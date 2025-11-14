@@ -96,31 +96,32 @@ class AuthSuperAdmin {
     }
 
     async makeAuthenticatedRequest(url, options = {}) {
-        if (!this.token) {
-            this.checkAuthentication();
-            throw new Error('Not authenticated');
-        }
-
-        const defaultOptions = {
-            headers: {
-                'Authorization': `Bearer ${this.token}`,
-                'Content-Type': 'application/json',
-                ...options.headers,
-            },
-        };
-
-        const response = await fetch(`/api${url}`, {
-            ...defaultOptions,
-            ...options,
-        });
-
-        if (response.status === 401) {
-            this.logout();
-            throw new Error('Authentication expired');
-        }
-
-        return response;
+    if (!this.token) {
+        this.checkAuthentication();
+        throw new Error('Not authenticated');
     }
+
+    const defaultOptions = {
+        headers: {
+            'Authorization': `Bearer ${this.token}`,
+            'Content-Type': 'application/json',
+            ...options.headers,
+        },
+    };
+
+    // ✅ FIXED: Remove `/api` prefix since URLs already include it
+    const response = await fetch(url, {
+        ...defaultOptions,
+        ...options,
+    });
+
+    if (response.status === 401) {
+        this.logout();
+        throw new Error('Authentication expired');
+    }
+
+    return response;
+}
 
     showNotification(message, type = 'info') {
         const notification = document.createElement('div');
