@@ -1,72 +1,101 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Call Manager Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .login-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Dashboard — Preconet</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <script src="https://kit.fontawesome.com/a2d9b1b0f0.js" crossorigin="anonymous"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* small custom */
+    .card-scroll { max-height: 460px; overflow: auto; }
+    .modal-backdrop { background: rgba(0,0,0,0.5); }
+  </style>
 </head>
-<body class="login-bg min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-md w-full">
-        <!-- Login Card -->
-        <div class="bg-white rounded-2xl shadow-xl p-8">
-            <!-- Logo -->
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-phone-alt text-white text-2xl"></i>
-                </div>
-                <h1 class="text-2xl font-bold text-gray-800">Call Manager Pro</h1>
-                <p class="text-gray-600 mt-2">Super Admin Login</p>
-            </div>
+<body class="bg-gray-100 min-h-screen">
 
-            <!-- Login Form -->
-            <form id="loginForm" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                    <div class="relative">
-                        <input type="email" id="email" class="w-full px-4 py-3 pl-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Enter your email" required>
-                        <i class="fas fa-envelope absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                    <div class="relative">
-                        <input type="password" id="password" class="w-full px-4 py-3 pl-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Enter your password" required>
-                        <i class="fas fa-lock absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2">
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span>Sign In to Dashboard</span>
-                </button>
-            </form>
-
-            <!-- Demo Credentials -->
-            <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-                <p class="text-sm text-blue-800 text-center">
-                    <strong>Demo Credentials:</strong><br>
-                    Email: super@callmanager.com<br>
-                    Password: admin123
-                </p>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="text-center mt-6">
-            <p class="text-white text-sm">
-                &copy; 2025 Call Manager Pro. All rights reserved.
-            </p>
-        </div>
+  <!-- Top bar -->
+  <header class="bg-white shadow p-4 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="text-xl font-bold">Call Manager Pro</div>
+      <div class="text-gray-500">Admin Dashboard</div>
     </div>
 
-    <script src="/js/auth.js"></script>
+    <div class="flex items-center gap-4">
+      <div id="current-admin-name" class="text-gray-700"></div>
+      <button id="logout-btn" class="px-3 py-1 rounded bg-red-500 text-white">Logout</button>
+    </div>
+  </header>
+
+  <main class="p-6 max-w-7xl mx-auto">
+    <!-- Stats row -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" id="stats-cards">
+      <!-- Stats injected here -->
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left: Users list (cards) -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Users</h2>
+            <div class="text-sm text-gray-500">Total <span id="total-users">0</span></div>
+          </div>
+
+          <div id="users-list" class="space-y-4 card-scroll">
+            <!-- user cards go here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Filters & mini charts -->
+      <div>
+        <div class="bg-white rounded-lg shadow p-4 mb-4">
+          <h3 class="font-semibold mb-2">Filters</h3>
+          <div class="space-y-2">
+            <input id="filter-name" type="text" placeholder="Search name or email" class="w-full border rounded px-3 py-2" />
+            <select id="filter-status" class="w-full border rounded px-3 py-2">
+              <option value="">All status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <button id="apply-filters" class="w-full bg-blue-600 text-white py-2 rounded">Apply</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-4">
+          <h3 class="font-semibold mb-2">Performance Overview</h3>
+          <canvas id="overviewChart" height="220"></canvas>
+          <div class="text-xs text-gray-500 mt-2">Average performance across your users</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- User detail modal -->
+  <div id="user-data-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 modal-backdrop">
+    <div class="bg-white rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3 overflow-auto max-h-[85vh]">
+      <div class="p-4 border-b flex justify-between items-center">
+        <h3 id="modal-user-name" class="text-xl font-semibold">User</h3>
+        <button id="close-user-data-modal" class="text-gray-600 hover:text-black"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div id="user-data-content" class="p-4 space-y-4">
+        <!-- content injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- scripts -->
+  <!-- use your AuthAdmin (auth.js) — ensure it's loaded before dashboard.js -->
+  <script src="/admin/js/auth.js"></script>
+  <script src="/admin/js/users_ui.js"></script>
+  <script src="/admin/js/dashboard.js"></script>
 </body>
 </html>
