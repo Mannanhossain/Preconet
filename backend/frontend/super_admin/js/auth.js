@@ -1,5 +1,6 @@
 class AuthSuperAdmin {
     constructor() {
+        this.backendUrl = "https://preconet-1.onrender.com"; // ✅ Your Render backend
         this.token = null;
         this.currentUser = null;
 
@@ -26,7 +27,7 @@ class AuthSuperAdmin {
         // Already logged in?
         this.token = sessionStorage.getItem('super_admin_token');
         if (this.token) {
-            window.location.href = '/super_admin';
+            window.location.href = `${this.backendUrl}/super_admin`;
         }
     }
 
@@ -43,7 +44,7 @@ class AuthSuperAdmin {
         submitBtn.disabled = true;
 
         try {
-            const response = await fetch('/api/superadmin/login', {
+            const response = await fetch(`${this.backendUrl}/api/superadmin/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -55,7 +56,8 @@ class AuthSuperAdmin {
                 sessionStorage.setItem('super_admin_token', data.access_token);
                 sessionStorage.setItem('super_admin_user', JSON.stringify(data.user));
 
-                window.location.href = '/super_admin';
+                // Redirect after login
+                window.location.href = `${this.backendUrl}/super_admin`;
             } else {
                 this.showNotification(data.error || 'Login failed', 'error');
             }
@@ -76,7 +78,7 @@ class AuthSuperAdmin {
         this.currentUser = JSON.parse(sessionStorage.getItem('super_admin_user') || 'null');
 
         if (!this.token || !this.currentUser) {
-            window.location.href = '/super_admin/login.html';
+            window.location.href = `${this.backendUrl}/super_admin/login.html`;
             return;
         }
 
@@ -104,7 +106,7 @@ class AuthSuperAdmin {
     logout() {
         sessionStorage.removeItem('super_admin_token');
         sessionStorage.removeItem('super_admin_user');
-        window.location.href = '/super_admin/login.html';
+        window.location.href = `${this.backendUrl}/super_admin/login.html`;
     }
 
     // ------------------------------
@@ -116,7 +118,7 @@ class AuthSuperAdmin {
             throw new Error('Not authenticated');
         }
 
-        const response = await fetch(`/api${url}`, {
+        const response = await fetch(`${this.backendUrl}/api${url}`, {
             headers: {
                 'Authorization': `Bearer ${this.token}`,
                 'Content-Type': 'application/json',
