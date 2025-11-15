@@ -8,18 +8,18 @@ bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 
 def validate_email(email):
-    """Validate email format"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
 
 def validate_phone(phone):
-    """Validate phone number format"""
     pattern = r'^\+?1?\d{9,15}$'
     return re.match(pattern, phone) is not None
 
 
-# 🟢 ADMIN LOGIN
+# ---------------------------------------------------------
+# ADMIN LOGIN
+# ---------------------------------------------------------
 @bp.route('/login', methods=['POST'])
 def login():
     try:
@@ -59,7 +59,9 @@ def login():
         return jsonify({'error': str(e)}), 500
 
 
-# 🟢 CREATE USER
+# ---------------------------------------------------------
+# CREATE USER
+# ---------------------------------------------------------
 @bp.route('/create-user', methods=['POST'])
 @jwt_required()
 def create_user():
@@ -122,7 +124,9 @@ def create_user():
         return jsonify({'error': str(e)}), 500
 
 
-# 🟢 GET ALL USERS
+# ---------------------------------------------------------
+# GET ALL USERS
+# ---------------------------------------------------------
 @bp.route('/users', methods=['GET'])
 @jwt_required()
 def get_users():
@@ -161,7 +165,9 @@ def get_users():
         return jsonify({'error': str(e)}), 500
 
 
-# 🟢 UPDATE USER
+# ---------------------------------------------------------
+# UPDATE USER
+# ---------------------------------------------------------
 @bp.route('/update-user/<int:user_id>', methods=['PUT'])
 @jwt_required()
 def update_user(user_id):
@@ -214,7 +220,9 @@ def update_user(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-# 🟢 DELETE USER
+# ---------------------------------------------------------
+# DELETE USER
+# ---------------------------------------------------------
 @bp.route('/delete-user/<int:user_id>', methods=['DELETE'])
 @jwt_required()
 def delete_user(user_id):
@@ -225,7 +233,7 @@ def delete_user(user_id):
         if not admin or not admin.is_active:
             return jsonify({'error': 'Unauthorized'}), 401
 
-        user = User.query.filter_by(id=user_id, admin_id=admin.id).first()
+        user = User.query.filterby(id=user_id, admin_id=admin.id).first()
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
@@ -247,7 +255,9 @@ def delete_user(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-# 🟢 DASHBOARD STATS
+# ---------------------------------------------------------
+# DASHBOARD STATS
+# ---------------------------------------------------------
 @bp.route('/dashboard-stats', methods=['GET'])
 @jwt_required()
 def dashboard_stats():
@@ -287,7 +297,9 @@ def dashboard_stats():
         return jsonify({'error': str(e)}), 500
 
 
-# 🟢 GET USER SYNC DATA
+# ---------------------------------------------------------
+# GET USER SYNC DATA
+# ---------------------------------------------------------
 @bp.route('/user-data/<int:user_id>', methods=['GET'])
 @jwt_required()
 def admin_get_user_data(user_id):
@@ -328,10 +340,12 @@ def admin_get_user_data(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-# 🟢 ALL USERS SYNC STATUS
+# ---------------------------------------------------------
+# USERS SYNC STATUS
+# ---------------------------------------------------------
 @bp.route('/users-sync-status', methods=['GET'])
 @jwt_required()
-def get_all_users_sync_status():
+def get_all_users_syn_status():
     try:
         current_user_id = int(get_jwt_identity())
         admin = Admin.query.get(current_user_id)
@@ -361,3 +375,43 @@ def get_all_users_sync_status():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------
+# 🛠️ TEMP FIX ROUTE — CREATE MISSING COLUMNS IN DATABASE
+# ---------------------------------------------------------
+@bp.route('/fix-admin-table', methods=['GET'])
+def fix_admin_table():
+    try:
+        db.session.execute("ALTER TABLE admins ADD COLUMN user_limit INTEGER DEFAULT 10;")
+    except:
+        print("user_limit already exists")
+
+    try:
+        db.session.execute("ALTER TABLE admins ADD COLUMN expiry_date TIMESTAMP;")
+    except:
+        print("expiry_date already exists")
+
+    try:
+        db.session.execute("ALTER TABLE admins ADD COLUMN created_by INTEGER;")
+    except:
+        print("created_by already exists")
+
+    try:
+        db.session.execute("ALTER TABLE admins ADD COLUMN created_at TIMESTAMP DEFAULT NOW();")
+    except:
+        print("created_at already exists")
+
+    try:
+        db.session.execute("ALTER TABLE admins ADD COLUMN last_login TIMESTAMP;")
+    except:
+        print("last_login already exists")
+
+    try:
+        db.session.execute("ALTER TABLE admins ADD COLUMN is_active BOOLEAN DEFAULT TRUE;")
+    except:
+        print("is_active already exists")
+
+    db.session.commit()
+
+    return {"message": "Admin table fixed!"}
