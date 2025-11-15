@@ -29,6 +29,10 @@ def create_app(config_class=Config):
     app.register_blueprint(admin.bp)
     app.register_blueprint(users.bp)
 
+    # ✅ REGISTER FIX ROUTE HERE
+    from app.routes.fix import bp as fix_bp
+    app.register_blueprint(fix_bp)
+
     # ------------------------------------------
     # AUTO DATABASE CREATION
     # ------------------------------------------
@@ -88,7 +92,6 @@ def create_app(config_class=Config):
     # ------------------------------------------
     # DASHBOARD ROUTES
     # ------------------------------------------
-
     @app.route('/super_admin')
     def super_admin_dashboard():
         return send_from_directory(os.path.join(FRONTEND_PATH, 'super_admin'), 'index.html')
@@ -109,7 +112,6 @@ def create_app(config_class=Config):
     # ------------------------------------------
     # STATIC FILE SERVING
     # ------------------------------------------
-
     @app.route('/super_admin/<path:filename>')
     def super_admin_static(filename):
         folder = os.path.join(FRONTEND_PATH, 'super_admin')
