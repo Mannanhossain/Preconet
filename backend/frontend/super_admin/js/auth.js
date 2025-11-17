@@ -12,6 +12,41 @@ class AuthSystem {
     }
 
     /************************************************************
+     * LOGIN FUNCTION (SUPER ADMIN)
+     ************************************************************/
+    async loginSuperAdmin(email, password) {
+        try {
+            const response = await fetch("/api/superadmin/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+            console.log("LOGIN RESPONSE:", data);
+
+            if (!response.ok) {
+                this.showNotification(data.error || "Login failed", "error");
+                return false;
+            }
+
+            // Save Token + User
+            this.saveLogin("super_admin", data.access_token, data.user);
+
+            this.showNotification("Login successful!", "success");
+
+            // REDIRECT
+            window.location.href = "/super_admin/index.html";
+            return true;
+
+        } catch (error) {
+            console.error("Login error:", error);
+            this.showNotification("Server error while logging in", "error");
+            return false;
+        }
+    }
+
+    /************************************************************
      * GET CURRENT TOKEN (Auto detects super/admin)
      ************************************************************/
     getToken() {
@@ -67,7 +102,7 @@ class AuthSystem {
         const token = this.getToken();
 
         if (!token) {
-            console.warn("⚠ No token found → redirecting to login");
+            this.showNotification("Please log in first.", "error");
             this.logout();
             return;
         }
@@ -88,7 +123,6 @@ class AuthSystem {
 
         // HANDLE TOKEN EXPIRED
         if (response.status === 401) {
-            console.error("⚠ Unauthorized / Token expired");
             this.showNotification("Session expired. Please log in again.", "error");
             this.logout();
             return;
