@@ -1,141 +1,92 @@
-/************************************************************
- * ACTIVITY LOG MANAGER – SUPER ADMIN
- ************************************************************/
 class ActivityManager {
     constructor() {
         this.activities = [];
+        this.init();
     }
 
-    /************************************************************
-     * LOAD ACTIVITY LOGS
-     ************************************************************/
+    init() {
+        const filter = document.getElementById("activityFilter");
+        if (filter) {
+            filter.addEventListener("change", () => this.renderActivity());
+        }
+    }
+
     async loadActivity() {
         try {
-            console.log("DEBUG: Fetching activity logs...");
-
-            const response = await auth.makeAuthenticatedRequest(
-                "/api/superadmin/logs"
-            );
-
+            const response = await auth.makeAuthenticatedRequest("/api/superadmin/logs");
             const data = await response.json();
-            console.log("DEBUG: Activity logs data:", data);
 
-            if (response.ok) {
-                this.activities = data.logs || [];
-                this.renderActivityTable();
-            } else {
-                auth.showNotification(data.error || "Failed to load activity logs", "error");
+            if (!response.ok) {
+                auth.showNotification(data.error || "Failed to load logs", "error");
+                return;
             }
+
+            this.activities = data.logs || [];
+            this.renderActivity();
+
         } catch (error) {
-            console.error("ERROR Loading Activity Logs:", error);
+            console.error("Error loading activity logs:", error);
             auth.showNotification("Error loading activity logs", "error");
         }
     }
 
-    /************************************************************
-     * FORMAT TIMESTAMP
-     ************************************************************/
-    formatTime(ts) {
-        if (!ts) return "Unknown";
-        const d = new Date(ts);
-        return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
-    }
+    renderActivity() {
+        const tableBody = document.getElementById("activity-table-body");
+        const filterValue = document.getElementById("activityFilter")?.value || "";
 
-    /************************************************************
-     * CLEAN ROLE FORMAT
-     ************************************************************/
-    formatRole(role) {
-        if (!role) return "Unknown";
-        return role.replace(/_/g, " ").toUpperCase();
-    }
+        if (!tableBody) return;
 
-    /************************************************************
-     * ICON BASED ON ACTION
-     ************************************************************/
-    getIcon(action = "") {
-        const a = action.toLowerCase();
-        if (a.includes("create")) return "plus-circle";
-        if (a.includes("delete")) return "trash";
-        if (a.includes("update")) return "edit";
-        if (a.includes("login")) return "sign-in-alt";
-        if (a.includes("logout")) return "sign-out-alt";
-        if (a.includes("sync")) return "sync";
-        return "history";
-    }
+        let logs = this.activities;
 
-    /************************************************************
-     * RENDER FULL ACTIVITY TABLE
-     ************************************************************/
-    renderActivityTable() {
-        const tbody = document.getElementById("activity-table-body");
-        if (!tbody) return;
+        // Apply filter
+        if (filterValue) {
+            logs = logs.filter(l => l.actor_role === filterValue);
+        }
 
-        if (this.activities.length === 0) {
-            tbody.innerHTML = `
+        if (logs.length === 0) {
+            tableBody.innerHTML = `
                 <tr>
-                    <td colspan="4" class="py-10 text-center text-gray-500">
-                        <i class="fas fa-history text-4xl mb-3 text-gray-300"></i>
-                        <p>No activity logs found</p>
+                    <td colspan="4" class="text-center py-10 text-gray-500">
+                        <i class="fas fa-history text-3xl mb-3 text-gray-300"></i>
+                        <p>No logs found</p>
                     </td>
                 </tr>
             `;
             return;
         }
 
-        tbody.innerHTML = this.activities
-            .map(log => `
-                <tr class="hover:bg-gray-50 transition">
+        tableBody.innerHTML = logs.map(log => `
+            <tr class="hover:bg-gray-50 transition">
 
-                    <!-- ACTION -->
-                    <td class="px-4 py-3">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-full flex items-center justify-center
-                                ${
-                                    log.actor_role === "super_admin"
-                                        ? "bg-purple-100 text-purple-600"
-                                        : log.actor_role === "admin"
-                                        ? "bg-blue-100 text-blue-600"
-                                        : "bg-green-100 text-green-600"
-                                }">
-                                <i class="fas fa-${this.getIcon(log.action)}"></i>
-                            </div>
-                            <span class="text-sm text-gray-800">${log.action}</span>
-                        </div>
-                    </td>
+                <td class="px-4 py-3 text-gray-800">
+                    ${log.action}
+                </td>
 
-                    <!-- ACTOR -->
-                    <td class="px-4 py-3">
-                        <span class="px-3 py-1 rounded-full text-xs font-medium
-                            ${
-                                log.actor_role === "super_admin"
-                                    ? "bg-purple-100 text-purple-700"
-                                    : log.actor_role === "admin"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-green-100 text-green-700"
-                            }">
-                            ${this.formatRole(log.actor_role)}
-                        </span>
-                        <span class="text-xs text-gray-500 ml-2">ID: ${log.actor_id}</span>
-                    </td>
+                <td class="px-4 py-3">
+                    <span class="px-3 py-1 rounded-full text-xs font-medium
+                        ${
+                            log.actor_role === "super_admin"
+                                ? "bg-purple-100 text-purple-800"
+                                : log.actor_role === "admin"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-green-100 text-green-800"
+                        }">
+                        ${log.actor_role.replace("_", " ").toUpperCase()}
+                    </span>
+                </td>
 
-                    <!-- TARGET -->
-                    <td class="px-4 py-3">
-                        <span class="text-sm text-gray-800">${log.target_type}</span>
-                        <p class="text-xs text-gray-500">ID: ${log.target_id ?? "N/A"}</p>
-                    </td>
+                <td class="px-4 py-3 text-sm text-gray-700">
+                    ${log.target_type || "N/A"}
+                    <span class="text-xs text-gray-400">(ID: ${log.target_id || "N/A"})</span>
+                </td>
 
-                    <!-- TIME -->
-                    <td class="px-4 py-3">
-                        <span class="text-sm">${this.formatTime(log.timestamp)}</span>
-                    </td>
+                <td class="px-4 py-3 text-sm text-gray-700">
+                    ${new Date(log.timestamp).toLocaleString()}
+                </td>
 
-                </tr>
-            `)
-            .join("");
+            </tr>
+        `).join("");
     }
 }
 
-/************************************************************
- * INIT ACTIVITY MANAGER
- ************************************************************/
 const activityManager = new ActivityManager();
