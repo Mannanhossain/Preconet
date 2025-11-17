@@ -85,15 +85,19 @@ class AuthSystem {
     /************************************************************
      * LOGOUT HANDLER
      ************************************************************/
-    logout() {
-        sessionStorage.removeItem(this.tokenKeySuper);
-        sessionStorage.removeItem(this.userKeySuper);
+   logout() {
+    console.log("Logging out...");
 
-        sessionStorage.removeItem(this.tokenKeyAdmin);
-        sessionStorage.removeItem(this.userKeyAdmin);
+    // Clear both admin and super admin sessions
+    sessionStorage.removeItem(this.tokenKeySuper);
+    sessionStorage.removeItem(this.userKeySuper);
+    sessionStorage.removeItem(this.tokenKeyAdmin);
+    sessionStorage.removeItem(this.userKeyAdmin);
 
-        window.location.href = "/super_admin/login.html";
-    }
+    // Force redirect correctly on all hosts
+    window.location.replace("/super_admin/login.html");
+}
+
 
     /************************************************************
      * MAKE AUTHENTICATED REQUEST
@@ -172,3 +176,4 @@ class AuthSystem {
 }
 
 const auth = new AuthSystem();
+
