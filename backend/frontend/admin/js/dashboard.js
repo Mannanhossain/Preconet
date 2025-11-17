@@ -1,9 +1,10 @@
 class AdminDashboard {
     constructor() {
         this.stats = null;
-        this.currentSection = 'dashboard';
         this.users = [];
-        window.adminDashboard = this; 
+        this.attendance = [];
+
+        window.adminDashboard = this;
         this.init();
     }
 
@@ -12,311 +13,297 @@ class AdminDashboard {
 
         await this.loadStats();
         await this.loadUsers();
+        await this.loadAttendance();
 
         this.setupNavigation();
         this.setupLogout();
-        this.setupEventListeners();
+        this.setupModalClose();
+        this.showSection("dashboard");
     }
 
     checkAuth() {
-        const token = sessionStorage.getItem('admin_token');
+        const token = sessionStorage.getItem("admin_token");
         if (!token) {
-            window.location.href = '/admin/login.html';
+            window.location.href = "/admin/login.html";
             return false;
         }
         return true;
     }
 
+    /* ============================================================
+       📌 LOAD ADMIN DASHBOARD STATS
+    ============================================================ */
     async loadStats() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/api/admin/dashboard-stats');
-            const data = await response.json();
+            const resp = await auth.makeAuthenticatedRequest(`/api/admin/dashboard-stats`);
+            const data = await resp.json();
 
-            if (response.ok && data.stats) {
+            if (resp.ok) {
                 this.stats = data.stats;
                 this.renderStats();
                 this.renderPerformanceOverview();
-            } else {
-                auth.showNotification(data.error || 'Failed to load dashboard stats', 'error');
             }
-        } catch (error) {
-            console.error('Stats error:', error);
-            auth.showNotification('Error loading dashboard data', 'error');
+        } catch (err) {
+            console.error("Stats Error:", err);
         }
     }
 
+    /* ============================================================
+       📌 LOAD USERS
+    ============================================================ */
     async loadUsers() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/api/admin/users');
-            const data = await response.json();
+            const resp = await auth.makeAuthenticatedRequest(`/api/admin/users`);
+            const data = await resp.json();
 
-            if (response.ok && data.users) {
+            if (resp.ok) {
                 this.users = data.users;
                 this.renderUsersTable();
-            } else {
-                auth.showNotification('Failed to load users', 'error');
             }
-        } catch (error) {
-            console.error('Users error:', error);
-            auth.showNotification('Error loading users', 'error');
+        } catch (err) {
+            console.error(err);
         }
     }
 
-    renderStats() {
-        const container = document.getElementById('stats-cards');
-        if (!container || !this.stats) return;
+    /* ============================================================
+       📌 LOAD ATTENDANCE
+    ============================================================ */
+    async loadAttendance() {
+        try {
+            const resp = await auth.makeAuthenticatedRequest(`/api/admin/attendance`);
+            const data = await resp.json();
 
-        const stats = this.stats;
-
-        const items = [
-            { label: "Total Users", value: stats.total_users, icon: "users", bg: "bg-blue-50", text: "text-blue-600" },
-            { label: "Active Users", value: stats.active_users, icon: "user-check", bg: "bg-green-50", text: "text-green-600" },
-            { label: "Users with Sync Data", value: stats.users_with_sync, icon: "sync", bg: "bg-purple-50", text: "text-purple-600" },
-            { label: "Remaining Slots", value: stats.remaining_slots, icon: "user-plus", bg: "bg-orange-50", text: "text-orange-600" }
-        ];
-
-        container.innerHTML = items.map(item => `
-            <div class="stat-card bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition">
-                <div class="flex justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600">${item.label}</p>
-                        <p class="text-3xl font-bold">${item.value}</p>
-                    </div>
-                    <div class="${item.bg} w-12 h-12 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-${item.icon} ${item.text} text-lg"></i>
-                    </div>
-                </div>
-            </div>
-        `).join("");
+            if (resp.ok) {
+                this.attendance = data.attendance;
+                this.renderAttendanceTable();
+            }
+        } catch (err) {
+            console.error(err);
+        }
     }
 
-    renderPerformanceOverview() {
-        const container = document.getElementById('performance-chart');
-        if (!container || !this.stats) return;
+    /* ============================================================
+       📌 RENDER STATS CARDS
+    ============================================================ */
+    renderStats() {
+        const div = document.getElementById("stats-cards");
+        if (!div || !this.stats) return;
 
         const s = this.stats;
-        const avg = s.avg_performance ?? 0;
-        const total = s.total_users ?? 0;
-        const limit = s.user_limit ?? 1;
 
-        const percent = (total / limit) * 100;
+        const stats = [
+            { label: "Total Users", value: s.total_users, icon: "users", color: "blue" },
+            { label: "Active Users", value: s.active_users, icon: "user-check", color: "green" },
+            { label: "Users With Sync", value: s.users_with_sync, icon: "sync", color: "purple" },
+            { label: "Remaining Slots", value: s.remaining_slots, icon: "user-plus", color: "yellow" }
+        ];
 
-        container.innerHTML = `
-            <div class="text-center">
-                <div class="text-3xl font-bold">${avg}%</div>
-                <div class="text-gray-600">Average Performance</div>
-            </div>
-
-            <div class="mt-4 space-y-3">
-                <div class="flex justify-between text-sm">
-                    <span>User Limit</span>
-                    <span>${total}/${limit}</span>
-                </div>
-
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="bg-green-600 h-2 rounded-full" style="width:${percent}%"></div>
-                </div>
-
-                <div class="flex justify-between text-sm">
-                    <span>Sync Rate</span>
-                    <span>${s.sync_rate}%</span>
+        div.innerHTML = stats
+            .map(
+                (i) => `
+            <div class="bg-white p-6 rounded-xl shadow">
+                <div class="flex justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">${i.label}</p>
+                        <p class="text-3xl font-bold">${i.value}</p>
+                    </div>
+                    <div class="h-12 w-12 rounded-xl bg-${i.color}-100 flex items-center justify-center text-${i.color}-600">
+                        <i class="fas fa-${i.icon} text-xl"></i>
+                    </div>
                 </div>
             </div>
+        `
+            )
+            .join("");
+    }
+
+    /* ============================================================
+       📌 PERFORMANCE
+    ============================================================ */
+    renderPerformanceOverview() {
+        const box = document.getElementById("performance-chart");
+        if (!box || !this.stats) return;
+
+        const s = this.stats;
+        const percent = (s.total_users / s.user_limit) * 100;
+
+        box.innerHTML = `
+            <p class="text-3xl font-bold">${s.avg_performance}%</p>
+            <p class="text-sm text-gray-500">Average Performance</p>
+
+            <p class="mt-4">Users: ${s.total_users}/${s.user_limit}</p>
+            <div class="w-full bg-gray-200 h-2 rounded-full">
+                <div class="bg-green-600 h-2 rounded-full" style="width:${percent}%"></div>
+            </div>
+
+            <p class="mt-4 text-sm">Sync Rate: ${s.sync_rate}%</p>
         `;
     }
 
+    /* ============================================================
+       📌 RENDER USERS TABLE
+    ============================================================ */
     renderUsersTable() {
-        const container = document.getElementById('users-table-body');
-        if (!container) return;
+        const body = document.getElementById("users-table-body");
+        if (!body) return;
 
-        container.innerHTML = this.users.map(u => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4">
+        body.innerHTML = this.users
+            .map(
+                (u) => `
+            <tr class="hover:bg-gray-100">
+                <td class="px-4 py-3">
                     <div class="flex items-center">
-                        <div class="h-10 w-10 bg-blue-500 text-white rounded-full flex items-center justify-center">
-                            ${u.name[0].toUpperCase()}
-                        </div>
-                        <div class="ml-4">
-                            <div class="text-sm font-medium">${u.name}</div>
-                            <div class="text-sm text-gray-500">${u.email}</div>
+                        <div class="h-10 w-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">${u.name[0]}</div>
+                        <div class="ml-3">
+                            <p class="font-semibold">${u.name}</p>
+                            <p class="text-sm text-gray-500">${u.email}</p>
                         </div>
                     </div>
                 </td>
-                <td class="px-6 py-4">${u.phone || "N/A"}</td>
-                <td class="px-6 py-4">
-                    <span class="px-2 py-1 rounded-full text-xs ${u.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}">
+
+                <td class="px-4 py-3">${u.phone ?? "N/A"}</td>
+
+                <td class="px-4 py-3">
+                    <span class="px-2 py-1 text-xs rounded-full ${
+                        u.is_active ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                    }">
                         ${u.is_active ? "Active" : "Inactive"}
                     </span>
                 </td>
-                <td class="px-6 py-4">${u.performance_score}%</td>
-                <td class="px-6 py-4">${u.last_sync ? new Date(u.last_sync).toLocaleDateString() : "Never"}</td>
-                <td class="px-6 py-4 text-right">
-                    <button class="text-blue-600 mr-2" onclick="adminDashboard.viewUserData(${u.id})">
-                        <i class="fas fa-database"></i> View
-                    </button>
-                    <button class="text-indigo-600 mr-2" onclick="adminDashboard.editUser(${u.id})">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button class="text-red-600" onclick="adminDashboard.deleteUser(${u.id})">
-                        <i class="fas fa-trash"></i> Delete
+
+                <td class="px-4 py-3">${u.performance_score}%</td>
+
+                <td class="px-4 py-3">${u.last_sync ? new Date(u.last_sync).toLocaleString() : "Never"}</td>
+
+                <td class="px-4 py-3 text-right">
+                    <button onclick="adminDashboard.viewUserDetails(${u.id})" class="text-blue-600 mr-3">
+                        <i class="fas fa-eye"></i> View
                     </button>
                 </td>
             </tr>
-        `).join("");
+        `
+            )
+            .join("");
     }
 
-    async viewUserData(userId) {
+    /* ============================================================
+       📌 RENDER ATTENDANCE TABLE
+    ============================================================ */
+    renderAttendanceTable() {
+        const body = document.getElementById("attendance-table-body");
+        if (!body) return;
+
+        body.innerHTML = this.attendance
+            .map(
+                (a) => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2">${a.user_name}</td>
+                <td class="px-4 py-2">${new Date(a.check_in).toLocaleDateString()}</td>
+                <td class="px-4 py-2">${new Date(a.check_in).toLocaleTimeString()}</td>
+                <td class="px-4 py-2">${a.check_out ? new Date(a.check_out).toLocaleTimeString() : "--"}</td>
+                <td class="px-4 py-2">${a.status}</td>
+                <td class="px-4 py-2">${a.address}</td>
+            </tr>
+        `
+            )
+            .join("");
+    }
+
+    /* ============================================================
+       📌 VIEW USER FULL DATA (Calls, Analytics, Attendance)
+    ============================================================ */
+    async viewUserDetails(userId) {
         try {
-            const response = await auth.makeAuthenticatedRequest(`/api/admin/user-data/${userId}`);
-            const data = await response.json();
+            const [analytics, calls, attendance] = await Promise.all([
+                auth.makeAuthenticatedRequest(`/api/admin/user-analytics/${userId}`),
+                auth.makeAuthenticatedRequest(`/api/admin/user-call-history/${userId}`),
+                auth.makeAuthenticatedRequest(`/api/admin/user-attendance/${userId}`)
+            ]);
 
-            if (!response.ok) {
-                auth.showNotification(data.error || "Failed to load user data", "error");
-                return;
-            }
+            const analyticsData = await analytics.json();
+            const callsData = await calls.json();
+            const attendanceData = await attendance.json();
 
-            const user = this.users.find(u => u.id === userId);
+            const user = this.users.find((u) => u.id === userId);
 
-            this.renderUserDataModal(user, data);
-
+            this.showUserModal(user, analyticsData, callsData, attendanceData);
         } catch (err) {
             console.error(err);
-            auth.showNotification("Error loading user data", "error");
+            auth.showNotification("Failed to load user data", "error");
         }
     }
 
-    renderUserDataModal(user, data) {
+    /* ============================================================
+       📌 USER DETAILS MODAL
+    ============================================================ */
+    showUserModal(user, analytics, calls, attendance) {
         const modal = document.getElementById("user-data-modal");
-        const content = document.getElementById("user-data-content");
+        const box = document.getElementById("user-data-content");
 
-        if (!modal || !content) return;
+        box.innerHTML = `
+            <h2 class="text-xl font-bold">${user.name}</h2>
+            <p class="text-sm text-gray-500 mb-4">
+                Last Sync: ${user.last_sync ? new Date(user.last_sync).toLocaleString() : "Never"}
+            </p>
 
-        content.innerHTML = `
-            <div class="p-6">
-                <h2 class="text-xl font-bold">${user.name}</h2>
-                <p class="text-sm text-gray-500">Last Sync: ${
-                    data.last_sync ? new Date(data.last_sync).toLocaleString() : "Never"
-                }</p>
+            <h3 class="font-semibold mt-4">Analytics</h3>
+            <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(analytics, null, 2)}</pre>
 
-                <div class="mt-4">
-                    <h3 class="font-semibold">Analytics</h3>
-                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(data.analytics, null, 2)}</pre>
-                </div>
+            <h3 class="font-semibold mt-4">Call History</h3>
+            <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(calls, null, 2)}</pre>
 
-                <div class="mt-4">
-                    <h3 class="font-semibold">Call History (${data.call_history?.length})</h3>
-                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(data.call_history, null, 2)}</pre>
-                </div>
-
-                <div class="mt-4">
-                    <h3 class="font-semibold">Contacts (${data.contacts?.length})</h3>
-                    <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(data.contacts, null, 2)}</pre>
-                </div>
-            </div>
+            <h3 class="font-semibold mt-4">Attendance</h3>
+            <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(attendance, null, 2)}</pre>
         `;
 
         modal.classList.remove("hidden");
     }
 
-    closeUserDataModal() {
+    setupModalClose() {
         const modal = document.getElementById("user-data-modal");
-        if (modal) modal.classList.add("hidden");
-    }
+        const close = document.getElementById("close-user-data-modal");
 
-    setupNavigation() {
-        const items = document.querySelectorAll(".nav-item");
-        const title = document.getElementById("page-title");
-        const subtitle = document.getElementById("page-subtitle");
+        if (close) {
+            close.onclick = () => modal.classList.add("hidden");
+        }
 
-        const pages = {
-            dashboard: {
-                title: "Admin Dashboard",
-                subtitle: "Manage your users and track performance",
-                section: "dashboard-section",
-            },
-            users: {
-                title: "Manage Users",
-                subtitle: "Add, edit, and manage user accounts",
-                section: "users-section",
-            },
-            performance: {
-                title: "Performance Analytics",
-                subtitle: "Monitor performance data",
-                section: "performance-section",
-            },
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.classList.add("hidden");
         };
-
-        items.forEach((item) => {
-            item.addEventListener("click", (e) => {
-                e.preventDefault();
-
-                items.forEach((n) => n.classList.remove("active"));
-                item.classList.add("active");
-
-                const target = item.getAttribute("href").replace("#", "");
-                const page = pages[target];
-
-                if (page) {
-                    this.currentSection = target;
-                    title.textContent = page.title;
-                    subtitle.textContent = page.subtitle;
-                    this.showSection(target);
-                }
-            });
-        });
     }
 
+    /* ============================================================
+       📌 SIMPLE PAGE NAVIGATION
+    ============================================================ */
     showSection(section) {
-        const sections = ["dashboard", "users", "performance"];
-
-        sections.forEach((sec) => {
-            const el = document.getElementById(`${sec}-section`);
-            if (el) el.style.display = "none";
+        ["dashboard", "users", "attendance", "performance"].forEach((s) => {
+            const div = document.getElementById(`${s}-section`);
+            if (div) div.style.display = "none";
         });
 
         const active = document.getElementById(`${section}-section`);
         if (active) active.style.display = "block";
     }
 
+    setupNavigation() {
+        document.querySelectorAll(".nav-item").forEach((item) => {
+            item.onclick = (e) => {
+                e.preventDefault();
+                const t = item.getAttribute("href").replace("#", "");
+                this.showSection(t);
+            };
+        });
+    }
+
     setupLogout() {
         const btn = document.getElementById("logout-btn");
         if (!btn) return;
 
-        btn.addEventListener("click", () => {
-            sessionStorage.removeItem("admin_token");
-            sessionStorage.removeItem("admin_user");
-
-            auth.showNotification("Logged out", "success");
-
-            setTimeout(() => {
-                window.location.href = "/admin/login.html";
-            }, 600);
-        });
-    }
-
-    setupEventListeners() {
-        const modal = document.getElementById("user-data-modal");
-        const closeBtn = document.getElementById("close-user-data-modal");
-
-        if (closeBtn) {
-            closeBtn.addEventListener("click", () => this.closeUserDataModal());
-        }
-
-        if (modal) {
-            modal.addEventListener("click", (e) => {
-                if (e.target === modal) this.closeUserDataModal();
-            });
-        }
-    }
-
-    editUser() {
-        auth.showNotification("Edit user feature coming soon", "info");
-    }
-
-    deleteUser() {
-        auth.showNotification("Delete user feature coming soon", "info");
+        btn.onclick = () => {
+            sessionStorage.clear();
+            window.location.href = "/admin/login.html";
+        };
     }
 }
 
-// Global instance
 window.adminDashboard = new AdminDashboard();

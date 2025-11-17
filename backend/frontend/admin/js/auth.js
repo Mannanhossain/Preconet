@@ -3,13 +3,15 @@ class AuthAdmin {
         this.token = null;
         this.currentUser = null;
 
-        // Works on localhost + Render + Railway
-        this.apiBaseUrl = '/api';
+        // Auto-detect backend URL
+        this.apiBaseUrl = window.location.origin.includes("localhost")
+            ? "http://localhost:5000/api"
+            : "https://preconet-1.onrender.com/api";
 
-        // Normalize path for safe checking
-        this.currentPath = window.location.pathname.replace(/\/+$/, "");
+        // Normalize path
+        this.currentPath = window.location.pathname.replace(/\/+$/, "").toLowerCase();
 
-        // Decide login or dashboard
+        // Load page
         if (this.isLoginPage()) {
             this.initLogin();
         } else {
@@ -17,14 +19,11 @@ class AuthAdmin {
         }
     }
 
-    // ---------------------------------------------------------
-    // PAGE MATCHING HELPERS
-    // ---------------------------------------------------------
-
+    /* --------------------------------------------------------
+       PAGE DETECTION
+    -------------------------------------------------------- */
     isLoginPage() {
         return (
-            this.currentPath === "/admin/login" ||
-            this.currentPath === "/admin/login.html" ||
             this.currentPath.endsWith("/admin/login") ||
             this.currentPath.endsWith("/admin/login.html")
         );
@@ -38,39 +37,34 @@ class AuthAdmin {
         );
     }
 
-    // ---------------------------------------------------------
-    // LOGIN PAGE INITIALIZATION
-    // ---------------------------------------------------------
-
+    /* --------------------------------------------------------
+       LOGIN PAGE
+    -------------------------------------------------------- */
     initLogin() {
-        const loginForm = document.getElementById("loginForm");
-
-        if (loginForm) {
-            loginForm.addEventListener("submit", (e) => {
+        const form = document.getElementById("loginForm");
+        if (form) {
+            form.addEventListener("submit", (e) => {
                 e.preventDefault();
                 this.handleLogin();
             });
         }
 
-        // Auto redirect if already logged in
+        // Already logged in → redirect
         this.token = sessionStorage.getItem("admin_token");
-        if (this.token) {
-            window.location.href = "/admin";
-        }
+        if (this.token) window.location.href = "/admin";
     }
 
-    // ---------------------------------------------------------
-    // LOGIN HANDLER
-    // ---------------------------------------------------------
-
+    /* --------------------------------------------------------
+       HANDLE LOGIN
+    -------------------------------------------------------- */
     async handleLogin() {
         const email = document.getElementById("email").value.trim();
         const password = document.getElementById("password").value.trim();
-        const submitBtn = document.querySelector('#loginForm button[type="submit"]');
+        const btn = document.querySelector('#loginForm button[type="submit"]');
 
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
-        submitBtn.disabled = true;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
+        btn.disabled = true;
 
         try {
             const response = await fetch(`${this.apiBaseUrl}/admin/login`, {
@@ -86,42 +80,38 @@ class AuthAdmin {
                 return;
             }
 
-            // Save token & user info
+            // Save token & user
             this.token = data.access_token;
             this.currentUser = data.user;
 
             sessionStorage.setItem("admin_token", this.token);
             sessionStorage.setItem("admin_user", JSON.stringify(this.currentUser));
 
-            // Redirect
             window.location.href = "/admin";
 
-        } catch (error) {
-            console.error("Login error:", error);
+        } catch (err) {
+            console.error("Login Error:", err);
             this.showNotification("Network error. Please try again.", "error");
-
         } finally {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     }
 
-    // ---------------------------------------------------------
-    // AUTH CHECK FOR DASHBOARD
-    // ---------------------------------------------------------
-
+    /* --------------------------------------------------------
+       CHECK LOGIN STATUS ON DASHBOARD
+    -------------------------------------------------------- */
     checkAuthentication() {
         try {
             this.token = sessionStorage.getItem("admin_token");
-            this.currentUser = JSON.parse(sessionStorage.getItem("admin_user") || "null");
+            this.currentUser = JSON.parse(sessionStorage.getItem("admin_user") || "{}");
         } catch {
             this.token = null;
             this.currentUser = null;
         }
 
         if (!this.token || !this.currentUser) {
-            window.location.href = "/admin/login.html";
-            return;
+            return (window.location.href = "/admin/login.html");
         }
 
         if (this.isDashboardPage()) {
@@ -129,26 +119,22 @@ class AuthAdmin {
         }
     }
 
-    // ---------------------------------------------------------
-    // DASHBOARD INITIALIZATION
-    // ---------------------------------------------------------
-
+    /* --------------------------------------------------------
+       DASHBOARD INIT
+    -------------------------------------------------------- */
     initDashboard() {
-        const adminNameElement = document.getElementById("current-admin-name");
-        if (adminNameElement && this.currentUser) {
-            adminNameElement.textContent = this.currentUser.name;
+        const nameBox = document.getElementById("current-admin-name");
+        if (nameBox && this.currentUser) {
+            nameBox.textContent = this.currentUser.name;
         }
 
         const logoutBtn = document.getElementById("logout-btn");
-        if (logoutBtn) {
-            logoutBtn.addEventListener("click", () => this.logout());
-        }
+        if (logoutBtn) logoutBtn.addEventListener("click", () => this.logout());
     }
 
-    // ---------------------------------------------------------
-    // LOGOUT
-    // ---------------------------------------------------------
-
+    /* --------------------------------------------------------
+       LOGOUT
+    -------------------------------------------------------- */
     logout() {
         sessionStorage.removeItem("admin_token");
         sessionStorage.removeItem("admin_user");
@@ -157,65 +143,66 @@ class AuthAdmin {
 
         setTimeout(() => {
             window.location.href = "/admin/login.html";
-        }, 700);
+        }, 500);
     }
 
-    // ---------------------------------------------------------
-    // AUTHENTICATED API REQUESTS
-    // ---------------------------------------------------------
-
+    /* --------------------------------------------------------
+       AUTH API REQUEST
+    -------------------------------------------------------- */
     async makeAuthenticatedRequest(url, options = {}) {
         if (!this.token) {
             this.logout();
             throw new Error("Not authenticated");
         }
 
-        const response = await fetch(`${this.apiBaseUrl}${url}`, {
-            ...options,
-            headers: {
-                "Authorization": `Bearer ${this.token}`,
-                "Content-Type": "application/json",
-                ...(options.headers || {}),
-            },
-        });
+        try {
+            const response = await fetch(`${this.apiBaseUrl}${url}`, {
+                ...options,
+                headers: {
+                    "Authorization": `Bearer ${this.token}`,
+                    "Content-Type": "application/json",
+                    ...(options.headers || {}),
+                },
+            });
 
-        // Token expired
-        if (response.status === 401) {
-            this.logout();
-            throw new Error("Authentication expired");
+            if (response.status === 401) {
+                this.logout();
+                throw new Error("Token expired");
+            }
+
+            return response;
+        } catch (err) {
+            this.showNotification("Network error", "error");
+            throw err;
         }
-
-        return response;
     }
 
-    // ---------------------------------------------------------
-    // NOTIFICATION POPUP
-    // ---------------------------------------------------------
+    /* --------------------------------------------------------
+       NOTIFICATION
+    -------------------------------------------------------- */
+    showNotification(msg, type = "info") {
+        const div = document.createElement("div");
 
-    showNotification(message, type = "info") {
-        const box = document.createElement("div");
-
-        box.className = `
-            fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white 
-            transition-all duration-300 transform
-            ${type === "error" ? "bg-red-500" :
-               type === "success" ? "bg-green-500" :
-               "bg-blue-500"}
+        div.className = `
+            fixed top-4 right-4 px-4 py-3 rounded-lg text-white shadow-lg z-50
+            transition-all duration-300
+            ${type === "error" ? "bg-red-600" :
+              type === "success" ? "bg-green-600" :
+              "bg-blue-600"}
         `;
 
-        box.innerHTML = `
-            <div class="flex items-center space-x-2">
+        div.innerHTML = `
+            <div class="flex items-center gap-2">
                 <i class="fas fa-${type === "error" ? "exclamation-circle" :
-                   type === "success" ? "check-circle" : "info-circle"}"></i>
-                <span>${message}</span>
+                                type === "success" ? "check-circle" : "info-circle"}"></i>
+                <span>${msg}</span>
             </div>
         `;
 
-        document.body.appendChild(box);
+        document.body.appendChild(div);
 
-        setTimeout(() => box.remove(), 3500);
+        setTimeout(() => div.remove(), 3000);
     }
 }
 
-// Initialize on page load
-const auth = new AuthAdmin();
+window.auth = new AuthAdmin();
