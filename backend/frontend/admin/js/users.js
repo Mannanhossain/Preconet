@@ -66,9 +66,7 @@ class UsersManager {
 
                 <td class="px-4 py-3">
                     <span class="px-2 py-1 text-xs rounded-full ${
-                        u.is_active
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
+                        u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                     }">
                         ${u.is_active ? "Active" : "Inactive"}
                     </span>
@@ -79,16 +77,6 @@ class UsersManager {
                         class="text-blue-600 mr-3">
                         <i class="fas fa-eye"></i>
                     </button>
-
-                    <button onclick="usersManager.editUser(${u.id})"
-                        class="text-indigo-600 mr-3">
-                        <i class="fas fa-edit"></i>
-                    </button>
-
-                    <button onclick="usersManager.deleteUser(${u.id})"
-                        class="text-red-600">
-                        <i class="fas fa-trash"></i>
-                    </button>
                 </td>
             </tr>
         `
@@ -97,23 +85,28 @@ class UsersManager {
     }
 
     /* ============================================================
-       LOAD + VIEW USER DATA (Calls, Analytics, Contacts, Attendance)
+       VIEW USER FULL DATA (FIXED)
     ============================================================ */
     async viewUserData(userId) {
         try {
-            const resp = await auth.makeAuthenticatedRequest(
-                `/api/admin/user-data/${userId}`
-            );
-
-            const data = await resp.json();
-
-            if (!resp.ok) {
-                auth.showNotification(data.error || "Failed to load user data", "error");
-                return;
-            }
-
             const user = this.users.find((u) => u.id === userId);
-            this.renderUserModal(user, data);
+
+            const [attResp, callResp, analyticsResp] = await Promise.all([
+                auth.makeAuthenticatedRequest(`/api/admin/user-attendance/${userId}`),
+                auth.makeAuthenticatedRequest(`/api/admin/user-call-history/${userId}`),
+                auth.makeAuthenticatedRequest(`/api/admin/user-analytics/${userId}`)
+            ]);
+
+            const attendance = await attResp.json();
+            const callHistory = await callResp.json();
+            const analytics = await analyticsResp.json();
+
+            this.renderUserModal(user, {
+                attendance: attendance.attendance || [],
+                call_history: callHistory.call_history || [],
+                analytics: analytics.analytics || {},
+                last_sync: user.last_sync
+            });
 
         } catch (err) {
             console.error("User data error:", err);
@@ -122,7 +115,7 @@ class UsersManager {
     }
 
     /* ============================================================
-       RENDER USER MODAL (Full Data)
+       RENDER USER MODAL
     ============================================================ */
     renderUserModal(user, data) {
         const modal = document.getElementById("user-data-modal");
@@ -138,40 +131,18 @@ class UsersManager {
 
                 <div>
                     <h3 class="font-semibold mb-2">Analytics</h3>
-                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(
-                        data.analytics,
-                        null,
-                        2
-                    )}</pre>
+                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(data.analytics, null, 2)}</pre>
                 </div>
 
                 <div>
-                    <h3 class="font-semibold mb-2">Call History (${data.call_history?.length})</h3>
-                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(
-                        data.call_history,
-                        null,
-                        2
-                    )}</pre>
+                    <h3 class="font-semibold mb-2">Call History (${data.call_history.length})</h3>
+                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(data.call_history, null, 2)}</pre>
                 </div>
 
                 <div>
-                    <h3 class="font-semibold mb-2">Contacts (${data.contacts?.length})</h3>
-                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(
-                        data.contacts,
-                        null,
-                        2
-                    )}</pre>
+                    <h3 class="font-semibold mb-2">Attendance Records (${data.attendance.length})</h3>
+                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(data.attendance, null, 2)}</pre>
                 </div>
-
-                <div>
-                    <h3 class="font-semibold mb-2">Attendance Records</h3>
-                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(
-                        data.attendance,
-                        null,
-                        2
-                    )}</pre>
-                </div>
-
             </div>
         `;
 
@@ -184,7 +155,7 @@ class UsersManager {
     }
 
     /* ============================================================
-       CREATE USER (From Create User Form)
+       CREATE USER
     ============================================================ */
     async handleCreateUser() {
         const form = document.getElementById("createUserForm");
@@ -205,7 +176,7 @@ class UsersManager {
                     "/api/admin/create-user",
                     {
                         method: "POST",
-                        body: JSON.stringify(payload),
+                        body: JSON.stringify(payload)
                     }
                 );
 
@@ -218,50 +189,16 @@ class UsersManager {
                 } else {
                     auth.showNotification(res.error || "Failed to create user", "error");
                 }
+
             } catch (err) {
                 console.error("Create user error:", err);
                 auth.showNotification("Error creating user", "error");
             }
         });
     }
-
-    /* ============================================================
-       DELETE USER
-    ============================================================ */
-    async deleteUser(id) {
-        if (!confirm("Are you sure you want to delete this user?")) return;
-
-        try {
-            const resp = await auth.makeAuthenticatedRequest(
-                `/api/admin/delete-user/${id}`,
-                { method: "DELETE" }
-            );
-
-            const res = await resp.json();
-
-            if (resp.ok) {
-                auth.showNotification("User deleted", "success");
-                this.loadUsers();
-            } else {
-                auth.showNotification(res.error || "Unable to delete user", "error");
-            }
-        } catch (err) {
-            console.error(err);
-            auth.showNotification("Error deleting user", "error");
-        }
-    }
-
-    /* ============================================================
-       EDIT USER (Placeholder)
-    ============================================================ */
-    editUser(id) {
-        auth.showNotification("Edit user feature coming soon", "info");
-    }
 }
 
-/* ============================================================
-   INIT
-============================================================ */
+/* INIT */
 document.addEventListener("DOMContentLoaded", () => {
     window.usersManager = new UsersManager();
     usersManager.handleCreateUser();
