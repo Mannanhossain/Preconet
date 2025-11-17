@@ -34,6 +34,7 @@ def login():
         if admin.is_expired():
             return jsonify({"error": "Account expired"}), 401
 
+        # Track last login
         admin.last_login = datetime.utcnow()
         db.session.commit()
 
@@ -59,7 +60,7 @@ def login():
 
 
 # ---------------------------------------------------------
-# CREATE USER
+# CREATE USER (FIXED)
 # ---------------------------------------------------------
 @bp.route("/create-user", methods=["POST"])
 @jwt_required()
@@ -74,6 +75,7 @@ def create_user():
         if admin.is_expired():
             return jsonify({"error": "Admin expired"}), 401
 
+        # Check user limit
         total_users = User.query.filter_by(admin_id=admin.id).count()
         if total_users >= admin.user_limit:
             return jsonify({"error": "User limit reached"}), 400
@@ -91,6 +93,7 @@ def create_user():
         if User.query.filter_by(email=data["email"]).first():
             return jsonify({"error": "Email already taken"}), 400
 
+        # Create user
         user = User(
             name=data["name"],
             email=data["email"],
@@ -102,7 +105,7 @@ def create_user():
         db.session.add(user)
         db.session.commit()
 
-        # Log
+        # Activity Log
         log = ActivityLog(
             actor_role=UserRole.ADMIN,
             actor_id=admin_id,
@@ -180,7 +183,8 @@ def dashboard_stats():
                 "remaining_slots": admin.user_limit - total,
                 "users_with_sync": synced,
                 "sync_rate": round((synced / total) * 100, 2) if total else 0,
-                "avg_performance": avg_perf
+                "avg_performance": avg_perf,
+                "performance_trend": [50, 60, 70, 65, 80, 75, 90]  # dummy trend
             }
         })
 
@@ -189,7 +193,42 @@ def dashboard_stats():
 
 
 # ---------------------------------------------------------
-# ATTENDANCE LIST FOR ADMIN PAGE
+# RECENT 10 USER SYNC (NEW)
+# ---------------------------------------------------------
+@bp.route("/recent-sync", methods=["GET"])
+@jwt_required()
+def recent_sync():
+    try:
+        admin_id = int(get_jwt_identity())
+
+        users = (
+            User.query
+            .filter_by(admin_id=admin_id)
+            .filter(User.last_sync.isnot(None))
+            .order_by(User.last_sync.desc())
+            .limit(10)
+            .all()
+        )
+
+        return jsonify({
+            "recent_sync": [
+                {
+                    "id": u.id,
+                    "name": u.name,
+                    "email": u.email,
+                    "phone": u.phone,
+                    "last_sync": u.last_sync.isoformat() if u.last_sync else None
+                }
+                for u in users
+            ]
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------
+# USER ATTENDANCE LIST
 # ---------------------------------------------------------
 @bp.route("/attendance", methods=["GET"])
 @jwt_required()
@@ -224,30 +263,18 @@ def admin_attendance():
 
 
 # ---------------------------------------------------------
-# USER FULL ATTENDANCE
-# ---------------------------------------------------------
-@bp.route("/user-attendance/<int:user_id>", methods=["GET"])
-@jwt_required()
-def user_attendance(user_id):
-    try:
-        records = Attendance.query.filter_by(user_id=user_id).all()
-
-        return jsonify({
-            "attendance": [a.to_dict() for a in records]
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ---------------------------------------------------------
 # USER CALL HISTORY
 # ---------------------------------------------------------
 @bp.route("/user-call-history/<int:user_id>", methods=["GET"])
 @jwt_required()
 def user_call_history(user_id):
     try:
-        calls = CallHistory.query.filter_by(user_id=user_id).order_by(CallHistory.timestamp.desc()).all()
+        calls = (
+            CallHistory.query
+            .filter_by(user_id=user_id)
+            .order_by(CallHistory.timestamp.desc())
+            .all()
+        )
 
         return jsonify({
             "call_history": [
@@ -269,7 +296,24 @@ def user_call_history(user_id):
 
 
 # ---------------------------------------------------------
-# USER ANALYTICS (PLACEHOLDER)
+# USER ATTENDANCE FULL LIST
+# ---------------------------------------------------------
+@bp.route("/user-attendance/<int:user_id>", methods=["GET"])
+@jwt_required()
+def user_attendance(user_id):
+    try:
+        records = Attendance.query.filter_by(user_id=user_id).all()
+
+        return jsonify({
+            "attendance": [a.to_dict() for a in records]
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------
+# PLACEHOLDER USER ANALYTICS
 # ---------------------------------------------------------
 @bp.route("/user-analytics/<int:user_id>", methods=["GET"])
 @jwt_required()
