@@ -11,8 +11,9 @@ bp = Blueprint("super_admin", __name__, url_prefix="/api/superadmin")
 # AUTO-CREATE DEFAULT SUPER ADMIN
 # =========================================================
 def create_default_super_admin():
-    default_email = "superadmin@preconet.com"
-    default_password = "Super@123"
+    default_email = "super@callmanager.com"
+    default_password = "admin123"
+
 
     existing = SuperAdmin.query.filter_by(email=default_email).first()
     if existing:
