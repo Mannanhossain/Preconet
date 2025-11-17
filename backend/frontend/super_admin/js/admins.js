@@ -1,20 +1,23 @@
+/************************************************************
+ *  ADMINS MANAGER – SUPER ADMIN DASHBOARD
+ ************************************************************/
 class AdminsManager {
     constructor() {
         this.admins = [];
         this.init();
     }
 
-    // =====================================================
-    // INITIAL SETUP
-    // =====================================================
+    /************************************************************
+     * INITIAL SETUP
+     ************************************************************/
     init() {
         this.setupCreateAdminForm();
         this.loadAdmins();
     }
 
-    // =====================================================
-    // SETUP CREATE ADMIN FORM
-    // =====================================================
+    /************************************************************
+     * SETUP CREATE ADMIN FORM
+     ************************************************************/
     setupCreateAdminForm() {
         const form = document.getElementById("createAdminForm");
 
@@ -25,30 +28,35 @@ class AdminsManager {
             });
         }
 
-        // Auto-set expiry date to today + 30 days
-        const expiryDate = document.getElementById("expiryDate");
-        if (expiryDate) {
-            const today = new Date().toISOString().split("T")[0];
-            expiryDate.min = today;
+        // FIX: Always set expiry date to today + 30 days
+        const expiryInput = document.getElementById("expiryDate");
 
-            const next = new Date();
-            next.setDate(next.getDate() + 30);
-            expiryDate.value = next.toISOString().split("T")[0];
+        if (expiryInput) {
+            const today = new Date().toISOString().split("T")[0];
+            expiryInput.min = today;
+
+            const after30 = new Date();
+            after30.setDate(after30.getDate() + 30);
+            expiryInput.value = after30.toISOString().split("T")[0];
         }
     }
 
-    // =====================================================
-    // CREATE NEW ADMIN
-    // =====================================================
+    /************************************************************
+     * CREATE ADMIN (FULLY FIXED)
+     ************************************************************/
     async createAdmin() {
         const name = document.getElementById("adminName").value.trim();
         const email = document.getElementById("adminEmail").value.trim();
         const password = document.getElementById("adminPassword").value.trim();
         const userLimit = Number(document.getElementById("userLimit").value || 10);
-        const expiryDate = document.getElementById("expiryDate").value;
 
-        if (!name || !email || !password || !expiryDate) {
-            auth.showNotification("Please fill all fields", "error");
+        let expiry_date_raw = document.getElementById("expiryDate").value;
+        const expiry_date = expiry_date_raw.split("T")[0]; //-- FIX: always send "YYYY-MM-DD"
+
+        console.log("DEBUG: Sending expiry_date =", expiry_date);
+
+        if (!name || !email || !password || !expiry_date) {
+            auth.showNotification("All fields are required", "error");
             return;
         }
 
@@ -57,7 +65,7 @@ class AdminsManager {
             email,
             password,
             user_limit: userLimit,
-            expiry_date: expiryDate
+            expiry_date: expiry_date
         };
 
         try {
@@ -70,17 +78,18 @@ class AdminsManager {
             );
 
             const data = await response.json();
+            console.log("DEBUG: Create admin response:", data);
 
             if (response.ok) {
                 auth.showNotification("Admin created successfully!", "success");
 
                 document.getElementById("createAdminForm").reset();
 
-                // restore default expiry date
-                const expiryDateInput = document.getElementById("expiryDate");
-                const next = new Date();
-                next.setDate(next.getDate() + 30);
-                expiryDateInput.value = next.toISOString().split("T")[0];
+                // reset expiry default again
+                const expiryInput = document.getElementById("expiryDate");
+                const after30 = new Date();
+                after30.setDate(after30.getDate() + 30);
+                expiryInput.value = after30.toISOString().split("T")[0];
 
                 this.loadAdmins();
             } else {
@@ -88,18 +97,20 @@ class AdminsManager {
             }
 
         } catch (error) {
-            console.error("Error creating admin:", error);
+            console.error("ERROR Creating Admin:", error);
             auth.showNotification("Server error while creating admin", "error");
         }
     }
 
-    // =====================================================
-    // LOAD ADMINS
-    // =====================================================
+    /************************************************************
+     * LOAD ADMINS
+     ************************************************************/
     async loadAdmins() {
         try {
             const response = await auth.makeAuthenticatedRequest("/api/superadmin/admins");
             const data = await response.json();
+
+            console.log("DEBUG: Admin list data:", data);
 
             if (response.ok) {
                 this.admins = data.admins || [];
@@ -107,15 +118,16 @@ class AdminsManager {
             } else {
                 auth.showNotification(data.error || "Failed to load admins", "error");
             }
+
         } catch (error) {
-            console.error("Error loading admins:", error);
+            console.error("ERROR Loading Admins:", error);
             auth.showNotification("Server error while loading admins", "error");
         }
     }
 
-    // =====================================================
-    // RENDER ADMIN TABLE
-    // =====================================================
+    /************************************************************
+     * RENDER ADMIN TABLE — FULLY FIXED DATE DISPLAY
+     ************************************************************/
     renderAdmins() {
         const tableBody = document.getElementById("admins-table-body");
         if (!tableBody) return;
@@ -134,20 +146,18 @@ class AdminsManager {
 
         tableBody.innerHTML = this.admins
             .map(admin => {
-                const exp = admin.expiry_date ? new Date(admin.expiry_date) : null;
-                const expStr = exp && !isNaN(exp) ? exp.toLocaleDateString() : "N/A";
+                let exp = admin.expiry_date ? new Date(admin.expiry_date) : null;
+                let expStr = exp && !isNaN(exp) ? exp.toLocaleDateString() : "N/A";
 
-                const status =
-                    !admin.is_active
-                        ? `<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs"><i class="fas fa-circle mr-1"></i>Inactive</span>`
-                        : admin.is_expired
-                        ? `<span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs"><i class="fas fa-circle mr-1"></i>Expired</span>`
-                        : `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs"><i class="fas fa-circle mr-1"></i>Active</span>`;
+                const status = !admin.is_active
+                    ? `<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs">Inactive</span>`
+                    : admin.is_expired
+                    ? `<span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs">Expired</span>`
+                    : `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs">Active</span>`;
 
                 return `
                 <tr class="hover:bg-gray-50 transition">
 
-                    <!-- NAME + EMAIL -->
                     <td class="px-4 py-4">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -160,25 +170,19 @@ class AdminsManager {
                         </div>
                     </td>
 
-                    <!-- USER LIMIT -->
                     <td class="px-4 py-4">
-                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
                             ${admin.user_count}/${admin.user_limit}
                         </span>
                     </td>
 
-                    <!-- EXPIRY DATE -->
                     <td class="px-4 py-4">
                         <i class="fas fa-calendar text-gray-500 mr-1"></i>
                         <span>${expStr}</span>
                     </td>
 
-                    <!-- STATUS -->
-                    <td class="px-4 py-4">
-                        ${status}
-                    </td>
+                    <td class="px-4 py-4">${status}</td>
 
-                    <!-- ACTIONS -->
                     <td class="px-4 py-4">
                         <div class="flex space-x-2">
                             <button onclick="adminsManager.editAdmin(${admin.id})"
@@ -199,20 +203,13 @@ class AdminsManager {
             .join("");
     }
 
-    // =====================================================
-    // EDIT (COMING SOON)
-    // =====================================================
     editAdmin(id) {
         auth.showNotification("Edit feature coming soon!", "info");
     }
 
-    // =====================================================
-    // DELETE ADMIN (NOT IMPLEMENTED)
-    // =====================================================
     deleteAdmin(id) {
-        auth.showNotification("Delete API not implemented in backend", "error");
+        auth.showNotification("Delete admin API is not implemented", "error");
     }
 }
 
-// GLOBAL INSTANCE
 const adminsManager = new AdminsManager();
