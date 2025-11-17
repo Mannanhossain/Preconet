@@ -39,34 +39,31 @@ def create_app(config_class=Config):
     app.register_blueprint(fix_bp)
 
     # ------------------------------------------
-    # DATABASE INITIALIZATION (SAFE FOR RENDER)
+    # DATABASE INITIALIZATION + DEFAULT SUPER ADMIN
     # ------------------------------------------
     with app.app_context():
         inspector = inspect(db.engine)
         tables = inspector.get_table_names()
 
-        # First-run database initialization
         if not tables:
-            print("⚙️ No tables detected → Creating database...")
+            print("⚙️ No tables detected → Creating DB...")
             db.create_all()
-            print("✅ Database tables created")
+            print("✅ Database created")
 
-        # Default SuperAdmin (only if missing)
+        # Create default Super Admin only once
         if not SuperAdmin.query.first():
-            print("⚙️ Creating default Super Admin account...")
-            super_admin = SuperAdmin(
-                name="Super Admin",
-                email="super@callmanager.com"
-            )
-            super_admin.set_password("admin123")
-            db.session.add(super_admin)
+            print("⚙️ Creating default super admin...")
+            sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
+            sa.set_password("admin123")
+            db.session.add(sa)
             db.session.commit()
-            print("✅ Default Super Admin ready (super@callmanager.com / admin123)")
+            print("✅ Default SuperAdmin READY (super@callmanager.com / admin123)")
 
     # ------------------------------------------
-    # FRONTEND STATIC PATH
+    # FIXED FRONTEND PATH FOR RENDER
     # ------------------------------------------
-    FRONTEND_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+    FRONTEND_PATH = os.path.abspath(os.path.join(os.getcwd(), "frontend"))
+    print("📁 FRONTEND PATH:", FRONTEND_PATH)
 
     # ------------------------------------------
     # ROOT ENDPOINT
@@ -80,7 +77,7 @@ def create_app(config_class=Config):
                 "health": "/api/health",
                 "super_admin_login": "/api/superadmin/login",
                 "admin_login": "/api/admin/login",
-                "user_login": "/api/users/login"
+                "user_login": "/api/users/login",
             }
         })
 
@@ -89,15 +86,15 @@ def create_app(config_class=Config):
     # ------------------------------------------
     @app.route("/api/health")
     def health():
-        return jsonify({
-            "status": "running",
-            "database": "connected",
-            "message": "Backend healthy!"
-        }), 200
+        return jsonify({"status": "running", "database": "connected"}), 200
 
     # ------------------------------------------
-    # SUPER ADMIN DASHBOARD
+    # SUPER ADMIN UI ROUTES
     # ------------------------------------------
+    @app.route("/super_admin/login.html")
+    def super_admin_login_page():
+        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
+
     @app.route("/super_admin")
     def super_admin_dashboard():
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "index.html")
@@ -106,13 +103,13 @@ def create_app(config_class=Config):
     def super_admin_static(filename):
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
 
-    @app.route("/super_admin/login.html")
-    def super_admin_login_page():
-        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
+    # ------------------------------------------
+    # ADMIN UI ROUTES
+    # ------------------------------------------
+    @app.route("/admin/login.html")
+    def admin_login_page():
+        return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
 
-    # ------------------------------------------
-    # ADMIN DASHBOARD
-    # ------------------------------------------
     @app.route("/admin")
     def admin_dashboard():
         return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "index.html")
@@ -120,9 +117,5 @@ def create_app(config_class=Config):
     @app.route("/admin/<path:filename>")
     def admin_static(filename):
         return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), filename)
-
-    @app.route("/admin/login.html")
-    def admin_login_page():
-        return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
 
     return app
