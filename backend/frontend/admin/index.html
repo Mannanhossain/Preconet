@@ -19,7 +19,6 @@
         .glass {
             background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
         .nav-item.active {
@@ -40,7 +39,7 @@
 <!-- OVERLAY -->
 <div id="overlay" class="fixed inset-0 bg-black/40 hidden z-40"></div>
 
-<!-- SIDEBAR -->
+<!-- ======================= SIDEBAR ======================= -->
 <aside id="sidebar"
        class="glass w-64 fixed h-full left-0 top-0 z-50 transform -translate-x-full lg:translate-x-0 transition-all">
 
@@ -61,34 +60,28 @@
 
     <nav class="mt-6">
 
-        <a href="#dashboard"
-           class="nav-item active flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+        <a href="#dashboard" class="nav-item active flex items-center px-6 py-3 text-gray-700">
             <i class="fas fa-chart-line w-5"></i> <span class="ml-3">Dashboard</span>
         </a>
 
-        <a href="#users"
-           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+        <a href="#users" class="nav-item flex items-center px-6 py-3 text-gray-700">
             <i class="fas fa-users w-5"></i> <span class="ml-3">Users</span>
         </a>
 
-        <a href="#attendance"
-           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+        <a href="#attendance" class="nav-item flex items-center px-6 py-3 text-gray-700">
             <i class="fas fa-id-card w-5"></i> <span class="ml-3">Attendance</span>
         </a>
 
-        <a href="#call-history"
-           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+        <a href="#call-history" class="nav-item flex items-center px-6 py-3 text-gray-700">
             <i class="fas fa-phone-alt w-5"></i> <span class="ml-3">Call History</span>
         </a>
 
-        <a href="#call-analytics"
-           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+        <a href="#call-analytics" class="nav-item flex items-center px-6 py-3 text-gray-700">
             <i class="fas fa-chart-pie w-5"></i>
             <span class="ml-3">Call Analytics</span>
         </a>
 
-        <a href="#performance"
-           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+        <a href="#performance" class="nav-item flex items-center px-6 py-3 text-gray-700">
             <i class="fas fa-chart-bar w-5"></i> <span class="ml-3">Performance</span>
         </a>
 
@@ -112,7 +105,7 @@
 
 </aside>
 
-<!-- MAIN -->
+<!-- ======================= MAIN CONTENT ======================= -->
 <main class="flex-1 lg:ml-64 overflow-y-auto h-screen bg-gray-100">
 
     <!-- HEADER -->
@@ -125,9 +118,7 @@
                 </button>
 
                 <div>
-                    <h2 id="page-title" class="text-xl font-bold text-gray-800">
-                        Dashboard Overview
-                    </h2>
+                    <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard Overview</h2>
                     <p id="page-subtitle" class="text-gray-500 text-sm">
                         Your system summary and insights.
                     </p>
@@ -136,22 +127,23 @@
             </div>
 
             <button id="logout-btn-header"
-                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center space-x-2">
-                <i class="fas fa-sign-out-alt"></i> <span class="hidden sm:inline">Logout</span>
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center">
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
             </button>
         </div>
     </header>
 
-    <!-- CONTENT -->
+    <!-- ======================= PAGE CONTENT ======================= -->
     <div class="p-4 lg:p-8">
 
-        <!-- ========================= DASHBOARD ======================= -->
+        <!-- ********** DASHBOARD SECTION ********** -->
         <section id="dashboard-section">
 
             <div id="stats-cards"
                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
                 <div class="lg:col-span-2 floating-card bg-white rounded-xl shadow-md p-6 border">
                     <h3 class="text-lg font-semibold mb-4">User Performance</h3>
                     <canvas id="performanceChart"></canvas>
@@ -169,32 +161,56 @@
 
         </section>
 
-        <!-- ========================= USERS ======================= -->
+        <!-- ********** USERS SECTION ********** -->
         <section id="users-section" class="hidden">
             <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
+
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-semibold">Users Management</h3>
                 </div>
 
+                <!-- Create User Form -->
+                <form id="createUserForm" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+
+                    <input id="userName" type="text" placeholder="Full Name"
+                           class="border px-4 py-2 rounded-lg" required />
+
+                    <input id="userEmail" type="email" placeholder="Email"
+                           class="border px-4 py-2 rounded-lg" required />
+
+                    <input id="userPhone" type="text" placeholder="Phone"
+                           class="border px-4 py-2 rounded-lg" required />
+
+                    <input id="userPassword" type="password" placeholder="Password"
+                           class="border px-4 py-2 rounded-lg" required />
+
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg col-span-full">
+                        <i class="fas fa-user-plus mr-2"></i> Create User
+                    </button>
+
+                </form>
+
+                <!-- Users table -->
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead>
-                            <tr class="bg-gray-100 text-left uppercase text-sm">
-                                <th class="px-4 py-3">User</th>
-                                <th class="px-4 py-3">Phone</th>
-                                <th class="px-4 py-3">Performance</th>
-                                <th class="px-4 py-3">Status</th>
-                                <th class="px-4 py-3">Actions</th>
-                            </tr>
+                        <tr class="bg-gray-100 text-left uppercase text-sm">
+                            <th class="px-4 py-3">User</th>
+                            <th class="px-4 py-3">Phone</th>
+                            <th class="px-4 py-3">Performance</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Actions</th>
+                        </tr>
                         </thead>
                         <tbody id="users-table-body"
                                class="divide-y divide-gray-200"></tbody>
                     </table>
                 </div>
+
             </div>
         </section>
 
-        <!-- ======================= ATTENDANCE ==================== -->
+        <!-- ********** ATTENDANCE SECTION ********** -->
         <section id="attendance-section" class="hidden">
             <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
 
@@ -205,14 +221,14 @@
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead>
-                            <tr class="bg-gray-100 text-left uppercase text-sm">
-                                <th class="px-4 py-3">Name</th>
-                                <th class="px-4 py-3">Date</th>
-                                <th class="px-4 py-3">Check In</th>
-                                <th class="px-4 py-3">Check Out</th>
-                                <th class="px-4 py-3">Status</th>
-                                <th class="px-4 py-3">Location</th>
-                            </tr>
+                        <tr class="bg-gray-100 uppercase text-sm">
+                            <th class="px-4 py-3">Name</th>
+                            <th class="px-4 py-3">Date</th>
+                            <th class="px-4 py-3">Check In</th>
+                            <th class="px-4 py-3">Check Out</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Location</th>
+                        </tr>
                         </thead>
                         <tbody id="attendance-table-body"
                                class="divide-y divide-gray-200"></tbody>
@@ -222,18 +238,16 @@
             </div>
         </section>
 
-        <!-- ======================= CALL HISTORY =================== -->
+        <!-- ********** CALL HISTORY SECTION ********** -->
         <section id="call-history-section" class="hidden">
             <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
 
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-semibold">Call History</h3>
-                </div>
+                <h3 class="text-xl font-semibold mb-4">Call History</h3>
 
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead>
-                        <tr class="bg-gray-100 text-left uppercase text-sm">
+                        <tr class="bg-gray-100 uppercase text-sm">
                             <th class="px-4 py-3">User</th>
                             <th class="px-4 py-3">Number</th>
                             <th class="px-4 py-3">Type</th>
@@ -249,7 +263,7 @@
             </div>
         </section>
 
-        <!-- ======================= CALL ANALYTICS ================= -->
+        <!-- ********** CALL ANALYTICS SECTION ********** -->
         <section id="call-analytics-section" class="hidden">
 
             <div class="floating-card bg-white rounded-xl shadow-md p-6 border mb-6">
@@ -270,13 +284,13 @@
                     <div class="overflow-x-auto">
                         <table class="min-w-full">
                             <thead>
-                                <tr class="bg-gray-100 text-left uppercase text-sm">
-                                    <th class="px-4 py-3">User</th>
-                                    <th class="px-4 py-3">Incoming</th>
-                                    <th class="px-4 py-3">Outgoing</th>
-                                    <th class="px-4 py-3">Missed</th>
-                                    <th class="px-4 py-3">Duration</th>
-                                </tr>
+                            <tr class="bg-gray-100 uppercase text-sm">
+                                <th class="px-4 py-3">User</th>
+                                <th class="px-4 py-3">Incoming</th>
+                                <th class="px-4 py-3">Outgoing</th>
+                                <th class="px-4 py-3">Missed</th>
+                                <th class="px-4 py-3">Duration</th>
+                            </tr>
                             </thead>
                             <tbody id="call-analytics-table"
                                    class="divide-y divide-gray-200"></tbody>
@@ -284,13 +298,45 @@
                     </div>
 
                 </div>
+
+            </div>
+        </section>
+
+        <!-- ********** PERFORMANCE SECTION ********** -->
+        <section id="performance-section" class="hidden">
+            <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
+
+                <h3 class="text-xl font-semibold mb-6">Performance Analytics</h3>
+
+                <canvas id="performanceBarChart" class="w-full h-96"></canvas>
+
             </div>
         </section>
 
     </div>
 </main>
 
-<!-- JS -->
+
+<!-- ********** USER DATA MODAL ********** -->
+<div id="user-data-modal"
+     class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-lg w-11/12 md:w-3/4 lg:w-1/2 max-h-[80vh] overflow-y-auto p-6">
+
+        <div class="flex justify-between items-center border-b pb-3">
+            <h3 class="text-xl font-semibold">User Data</h3>
+            <button onclick="usersManager.closeUserDataModal()"
+                    class="text-gray-500 hover:text-red-500">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <div id="user-data-content" class="mt-4 space-y-6"></div>
+
+    </div>
+</div>
+
+
+<!-- ======================= JS CONNECTIONS ======================= -->
 <script src="/admin/js/auth.js"></script>
 <script src="/admin/js/dashboard.js"></script>
 <script src="/admin/js/users.js"></script>
@@ -299,28 +345,29 @@
 <script src="/admin/js/call_analytics.js"></script>
 <script src="/admin/js/performance.js"></script>
 
-<!-- SIDEBAR + NAVIGATION -->
+<!-- SIDEBAR & NAVIGATION HANDLERS -->
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
+
     const sidebar = document.getElementById("sidebar");
     const overlay = document.getElementById("overlay");
     const openBtn = document.getElementById("openSidebarBtn");
     const closeBtn = document.getElementById("closeSidebarBtn");
 
-    openBtn.addEventListener("click", () => {
+    openBtn.onclick = () => {
         sidebar.classList.remove("-translate-x-full");
         overlay.classList.remove("hidden");
-    });
+    };
 
-    closeBtn.addEventListener("click", () => {
+    closeBtn.onclick = () => {
         sidebar.classList.add("-translate-x-full");
         overlay.classList.add("hidden");
-    });
+    };
 
-    overlay.addEventListener("click", () => {
+    overlay.onclick = () => {
         sidebar.classList.add("-translate-x-full");
         overlay.classList.add("hidden");
-    });
+    };
 
     const navItems = document.querySelectorAll(".nav-item");
     const sections = [
@@ -333,13 +380,12 @@ document.addEventListener("DOMContentLoaded", function () {
             const el = document.getElementById(`${sec}-section`);
             if (el) el.classList.add("hidden");
         });
-
         document.getElementById(`${section}-section`).classList.remove("hidden");
 
         if (section === "users") usersManager.loadUsers();
+        if (section === "attendance") adminDashboard.loadAttendance();
         if (section === "call-history") callHistoryManager.loadCalls();
         if (section === "call-analytics") callAnalyticsManager.loadAnalytics();
-        if (section === "attendance") adminDashboard.loadAttendance();
         if (section === "performance") performanceManager.loadPerformance();
     }
 
@@ -352,6 +398,7 @@ document.addEventListener("DOMContentLoaded", function () {
             showSection(section);
         });
     });
+
 });
 </script>
 
