@@ -2,19 +2,23 @@ from flask import Flask, jsonify, send_from_directory
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_cors import CORS
-from app.models import db, bcrypt, SuperAdmin
-from config import Config
 from sqlalchemy import inspect
 import os
 
+from app.models import db, bcrypt, SuperAdmin
+from config import Config
+
 jwt = JWTManager()
 migrate = Migrate()
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Initialize extensions
+    # ------------------------------------------
+    # INITIALIZE EXTENSIONS
+    # ------------------------------------------
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
@@ -24,30 +28,32 @@ def create_app(config_class=Config):
     # ------------------------------------------
     # REGISTER BLUEPRINTS
     # ------------------------------------------
-    from app.routes import super_admin, admin, users
-    app.register_blueprint(super_admin.bp)
-    app.register_blueprint(admin.bp)
-    app.register_blueprint(users.bp)
-
-    # ✅ REGISTER FIX ROUTE HERE
+    from app.routes.super_admin import bp as super_admin_bp
+    from app.routes.admin import bp as admin_bp
+    from app.routes.users import bp as users_bp
     from app.routes.fix import bp as fix_bp
+
+    app.register_blueprint(super_admin_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(users_bp)
     app.register_blueprint(fix_bp)
 
     # ------------------------------------------
-    # AUTO DATABASE CREATION
+    # DATABASE INITIALIZATION (SAFE FOR RENDER)
     # ------------------------------------------
     with app.app_context():
         inspector = inspect(db.engine)
         tables = inspector.get_table_names()
 
-        # SQLAlchemy table name is plural (super_admins)
-        if "super_admins" not in tables:
-            print("⚙️ Creating missing database tables...")
+        # First-run database initialization
+        if not tables:
+            print("⚙️ No tables detected → Creating database...")
             db.create_all()
-            print("✅ Tables created successfully!")
+            print("✅ Database tables created")
 
-        # Create default Super Admin if missing
+        # Default SuperAdmin (only if missing)
         if not SuperAdmin.query.first():
+            print("⚙️ Creating default Super Admin account...")
             super_admin = SuperAdmin(
                 name="Super Admin",
                 email="super@callmanager.com"
@@ -55,71 +61,68 @@ def create_app(config_class=Config):
             super_admin.set_password("admin123")
             db.session.add(super_admin)
             db.session.commit()
-            print("✅ Default Super Admin created: super@callmanager.com / admin123")
+            print("✅ Default Super Admin ready (super@callmanager.com / admin123)")
 
     # ------------------------------------------
-    # FRONTEND PATH
+    # FRONTEND STATIC PATH
     # ------------------------------------------
-    FRONTEND_PATH = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+    FRONTEND_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 
     # ------------------------------------------
-    # ROOT API MESSAGE
+    # ROOT ENDPOINT
     # ------------------------------------------
-    @app.route('/')
+    @app.route("/")
     def home():
         return jsonify({
             "status": "running",
-            "message": "Call Manager Pro API is running!",
-            "endpoints": {
+            "message": "Call Manager Pro Backend is LIVE!",
+            "routes": {
                 "health": "/api/health",
                 "super_admin_login": "/api/superadmin/login",
                 "admin_login": "/api/admin/login",
-                "admin_dashboard": "/admin",
-                "super_admin_dashboard": "/super_admin"
+                "user_login": "/api/users/login"
             }
         })
 
     # ------------------------------------------
-    # HEALTH
+    # HEALTH CHECK
     # ------------------------------------------
     @app.route("/api/health")
     def health():
         return jsonify({
             "status": "running",
-            "message": "✅ Flask backend connected and healthy!"
+            "database": "connected",
+            "message": "Backend healthy!"
         }), 200
 
     # ------------------------------------------
-    # DASHBOARD ROUTES
+    # SUPER ADMIN DASHBOARD
     # ------------------------------------------
-    @app.route('/super_admin')
+    @app.route("/super_admin")
     def super_admin_dashboard():
-        return send_from_directory(os.path.join(FRONTEND_PATH, 'super_admin'), 'index.html')
+        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "index.html")
 
-    @app.route('/admin')
-    def admin_dashboard():
-        return send_from_directory(os.path.join(FRONTEND_PATH, 'admin'), 'index.html')
-
-    # LOGIN PAGES
-    @app.route('/super_admin/login.html')
-    def super_admin_login_page():
-        return send_from_directory(os.path.join(FRONTEND_PATH, 'super_admin'), 'login.html')
-
-    @app.route('/admin/login.html')
-    def admin_login_page():
-        return send_from_directory(os.path.join(FRONTEND_PATH, 'admin'), 'login.html')
-
-    # ------------------------------------------
-    # STATIC FILE SERVING
-    # ------------------------------------------
-    @app.route('/super_admin/<path:filename>')
+    @app.route("/super_admin/<path:filename>")
     def super_admin_static(filename):
-        folder = os.path.join(FRONTEND_PATH, 'super_admin')
-        return send_from_directory(folder, filename)
+        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
 
-    @app.route('/admin/<path:filename>')
+    @app.route("/super_admin/login.html")
+    def super_admin_login_page():
+        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
+
+    # ------------------------------------------
+    # ADMIN DASHBOARD
+    # ------------------------------------------
+    @app.route("/admin")
+    def admin_dashboard():
+        return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "index.html")
+
+    @app.route("/admin/<path:filename>")
     def admin_static(filename):
-        folder = os.path.join(FRONTEND_PATH, 'admin')
-        return send_from_directory(folder, filename)
+        return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), filename)
+
+    @app.route("/admin/login.html")
+    def admin_login_page():
+        return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
 
     return app
