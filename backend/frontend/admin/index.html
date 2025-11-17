@@ -1,405 +1,245 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard – Call Manager Pro</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call Manager Pro - Admin Panel</title>
 
-    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Icons -->
     <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-
-    <!-- ChartJS -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        .glass {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        .nav-item.active {
-            background: rgba(59,130,246,0.15);
-            border-right: 4px solid #3b82f6;
-        }
-        .floating-card {
-            transition: 0.3s ease;
-        }
-        .floating-card:hover {
-            transform: translateY(-6px);
-        }
+        .hidden-section { display: none; }
+        .active-menu { background: #e0f2fe; border-right: 4px solid #0284c7; }
     </style>
 </head>
 
-<body class="bg-gray-100 flex h-screen overflow-hidden">
+<body class="bg-gray-100">
 
-<!-- OVERLAY -->
-<div id="overlay" class="fixed inset-0 bg-black/40 hidden z-40"></div>
+<!-- ================= SIDEBAR ================= -->
+<div class="flex h-screen">
 
-<!-- ======================= SIDEBAR ======================= -->
-<aside id="sidebar"
-       class="glass w-64 fixed h-full left-0 top-0 z-50 transform -translate-x-full lg:translate-x-0 transition-all">
+    <aside class="w-64 bg-white shadow-lg flex flex-col">
 
-    <div class="p-6 border-b border-white/20 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-md">
-                <i class="fas fa-phone text-white"></i>
-            </div>
-            <div>
-                <h1 class="text-lg font-bold text-gray-800">Call Manager Pro</h1>
-                <p class="text-xs text-gray-600">Admin Panel</p>
-            </div>
+        <div class="p-6 border-b border-gray-200">
+            <h1 class="text-xl font-bold text-gray-800">Admin Panel</h1>
+            <p class="text-sm text-gray-500">Call Manager Pro</p>
         </div>
-        <button id="closeSidebarBtn" class="lg:hidden text-gray-600">
-            <i class="fas fa-times"></i>
+
+        <nav class="flex-1 p-4 space-y-2">
+
+            <a id="menuDashboard"
+               class="menu-item active-menu flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
+            </a>
+
+            <a id="menuUsers"
+               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-users"></i> <span>Users</span>
+            </a>
+
+            <a id="menuCreateUser"
+               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-user-plus"></i> <span>Create User</span>
+            </a>
+
+            <a id="menuAttendance"
+               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-calendar-check"></i> <span>Attendance</span>
+            </a>
+
+            <a id="menuCallHistory"
+               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-phone-alt"></i> <span>Call History</span>
+            </a>
+
+            <a id="menuPerformance"
+               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-chart-line"></i> <span>Performance</span>
+            </a>
+
+        </nav>
+
+        <button id="logoutBtn"
+                class="m-4 bg-red-600 text-white p-2 rounded text-center">
+            <i class="fas fa-sign-out-alt"></i> Logout
         </button>
-    </div>
+    </aside>
 
-    <nav class="mt-6">
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="flex-1 overflow-auto p-6">
 
-        <a href="#dashboard" class="nav-item active flex items-center px-6 py-3 text-gray-700">
-            <i class="fas fa-chart-line w-5"></i> <span class="ml-3">Dashboard</span>
-        </a>
+        <!-- ========== Dashboard Section ========== -->
+        <section id="sectionDashboard">
+            <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
 
-        <a href="#users" class="nav-item flex items-center px-6 py-3 text-gray-700">
-            <i class="fas fa-users w-5"></i> <span class="ml-3">Users</span>
-        </a>
+            <div id="stats-cards" class="grid grid-cols-1 md:grid-cols-4 gap-4"></div>
 
-        <a href="#attendance" class="nav-item flex items-center px-6 py-3 text-gray-700">
-            <i class="fas fa-id-card w-5"></i> <span class="ml-3">Attendance</span>
-        </a>
-
-        <a href="#call-history" class="nav-item flex items-center px-6 py-3 text-gray-700">
-            <i class="fas fa-phone-alt w-5"></i> <span class="ml-3">Call History</span>
-        </a>
-
-        <a href="#call-analytics" class="nav-item flex items-center px-6 py-3 text-gray-700">
-            <i class="fas fa-chart-pie w-5"></i>
-            <span class="ml-3">Call Analytics</span>
-        </a>
-
-        <a href="#performance" class="nav-item flex items-center px-6 py-3 text-gray-700">
-            <i class="fas fa-chart-bar w-5"></i> <span class="ml-3">Performance</span>
-        </a>
-
-    </nav>
-
-    <!-- Bottom User -->
-    <div class="absolute bottom-0 w-full border-t border-white/20 p-4">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-user text-blue-600"></i>
+            <div class="mt-6">
+                <canvas id="performanceChart" height="120"></canvas>
             </div>
-            <div class="flex-1">
-                <p id="current-admin-name" class="font-medium text-gray-800 text-sm">Loading...</p>
-                <p class="text-xs text-gray-500">Admin</p>
-            </div>
-            <button id="logout-btn-sidebar" class="text-gray-400 hover:text-red-600">
-                <i class="fas fa-sign-out-alt"></i>
-            </button>
-        </div>
-    </div>
+        </section>
 
-</aside>
+        <!-- ========== Users Section ========== -->
+        <section id="sectionUsers" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Users</h2>
 
-<!-- ======================= MAIN CONTENT ======================= -->
-<main class="flex-1 lg:ml-64 overflow-y-auto h-screen bg-gray-100">
+            <table class="w-full bg-white rounded shadow overflow-hidden">
+                <thead class="bg-gray-200 text-left">
+                    <tr>
+                        <th class="p-3">User</th>
+                        <th class="p-3">Phone</th>
+                        <th class="p-3">Performance</th>
+                        <th class="p-3">Status</th>
+                        <th class="p-3 text-right">Actions</th>
+                    </tr>
+                </thead>
 
-    <!-- HEADER -->
-    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
-        <div class="flex justify-between items-center px-4 lg:px-8 py-4">
-            <div class="flex items-center space-x-4">
+                <tbody id="users-table-body"></tbody>
+            </table>
+        </section>
 
-                <button id="openSidebarBtn" class="lg:hidden text-gray-600">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
+        <!-- ========== Create User Section ========== -->
+        <section id="sectionCreateUser" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Create User</h2>
+
+            <form id="createUserForm"
+                  class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded shadow">
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm mb-1">Full Name</label>
+                    <input id="userName"
+                           class="border p-2 w-full rounded" required />
+                </div>
 
                 <div>
-                    <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard Overview</h2>
-                    <p id="page-subtitle" class="text-gray-500 text-sm">
-                        Your system summary and insights.
-                    </p>
+                    <label class="block text-sm mb-1">Email</label>
+                    <input id="userEmail"
+                           type="email"
+                           class="border p-2 w-full rounded" required />
                 </div>
 
-            </div>
-
-            <button id="logout-btn-header"
-                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center">
-                <i class="fas fa-sign-out-alt mr-2"></i> Logout
-            </button>
-        </div>
-    </header>
-
-    <!-- ======================= PAGE CONTENT ======================= -->
-    <div class="p-4 lg:p-8">
-
-        <!-- ********** DASHBOARD SECTION ********** -->
-        <section id="dashboard-section">
-
-            <div id="stats-cards"
-                 class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                <div class="lg:col-span-2 floating-card bg-white rounded-xl shadow-md p-6 border">
-                    <h3 class="text-lg font-semibold mb-4">User Performance</h3>
-                    <canvas id="performanceChart"></canvas>
+                <div>
+                    <label class="block text-sm mb-1">Phone</label>
+                    <input id="userPhone"
+                           class="border p-2 w-full rounded" />
                 </div>
 
-                <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
-                    <div class="flex justify-between">
-                        <h3 class="text-lg font-semibold">Recent User Sync</h3>
-                        <i class="fas fa-sync text-blue-600"></i>
-                    </div>
-                    <div id="recent-sync-list"
-                         class="mt-4 space-y-4 max-h-80 overflow-y-auto"></div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm mb-1">Password</label>
+                    <input id="userPassword"
+                           type="password"
+                           class="border p-2 w-full rounded" required />
                 </div>
-            </div>
 
+                <button type="submit"
+                        class="md:col-span-2 bg-blue-600 text-white py-2 rounded">
+                    Create User
+                </button>
+
+            </form>
         </section>
 
-        <!-- ********** USERS SECTION ********** -->
-        <section id="users-section" class="hidden">
-            <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
-
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-semibold">Users Management</h3>
-                </div>
-
-                <!-- Create User Form -->
-                <form id="createUserForm" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-
-                    <input id="userName" type="text" placeholder="Full Name"
-                           class="border px-4 py-2 rounded-lg" required />
-
-                    <input id="userEmail" type="email" placeholder="Email"
-                           class="border px-4 py-2 rounded-lg" required />
-
-                    <input id="userPhone" type="text" placeholder="Phone"
-                           class="border px-4 py-2 rounded-lg" required />
-
-                    <input id="userPassword" type="password" placeholder="Password"
-                           class="border px-4 py-2 rounded-lg" required />
-
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg col-span-full">
-                        <i class="fas fa-user-plus mr-2"></i> Create User
-                    </button>
-
-                </form>
-
-                <!-- Users table -->
-                <div class="overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead>
-                        <tr class="bg-gray-100 text-left uppercase text-sm">
-                            <th class="px-4 py-3">User</th>
-                            <th class="px-4 py-3">Phone</th>
-                            <th class="px-4 py-3">Performance</th>
-                            <th class="px-4 py-3">Status</th>
-                            <th class="px-4 py-3">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody id="users-table-body"
-                               class="divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-
-            </div>
+        <!-- ========== Attendance Section ========== -->
+        <section id="sectionAttendance" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Attendance</h2>
+            <table class="w-full bg-white rounded shadow">
+                <thead class="bg-gray-200">
+                <tr>
+                    <th class="p-3">User</th>
+                    <th class="p-3">Check In</th>
+                    <th class="p-3">Check Out</th>
+                    <th class="p-3">Status</th>
+                </tr>
+                </thead>
+                <tbody id="attendance-table-body"></tbody>
+            </table>
         </section>
 
-        <!-- ********** ATTENDANCE SECTION ********** -->
-        <section id="attendance-section" class="hidden">
-            <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
+        <!-- ========== Call History Section ========== -->
+        <section id="sectionCallHistory" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Call History</h2>
 
-                <div class="flex justify-between mb-4">
-                    <h3 class="text-xl font-semibold">Attendance Records</h3>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead>
-                        <tr class="bg-gray-100 uppercase text-sm">
-                            <th class="px-4 py-3">Name</th>
-                            <th class="px-4 py-3">Date</th>
-                            <th class="px-4 py-3">Check In</th>
-                            <th class="px-4 py-3">Check Out</th>
-                            <th class="px-4 py-3">Status</th>
-                            <th class="px-4 py-3">Location</th>
-                        </tr>
-                        </thead>
-                        <tbody id="attendance-table-body"
-                               class="divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-
-            </div>
+            <div id="call-history-container"
+                 class="bg-white p-4 rounded shadow"></div>
         </section>
 
-        <!-- ********** CALL HISTORY SECTION ********** -->
-        <section id="call-history-section" class="hidden">
-            <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
+        <!-- ========== Performance Section ========== -->
+        <section id="sectionPerformance" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Performance</h2>
 
-                <h3 class="text-xl font-semibold mb-4">Call History</h3>
-
-                <div class="overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead>
-                        <tr class="bg-gray-100 uppercase text-sm">
-                            <th class="px-4 py-3">User</th>
-                            <th class="px-4 py-3">Number</th>
-                            <th class="px-4 py-3">Type</th>
-                            <th class="px-4 py-3">Duration</th>
-                            <th class="px-4 py-3">Timestamp</th>
-                        </tr>
-                        </thead>
-                        <tbody id="call-history-table"
-                               class="divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-
-            </div>
+            <div id="performance-container"
+                 class="bg-white p-4 rounded shadow"></div>
         </section>
 
-        <!-- ********** CALL ANALYTICS SECTION ********** -->
-        <section id="call-analytics-section" class="hidden">
+    </main>
 
-            <div class="floating-card bg-white rounded-xl shadow-md p-6 border mb-6">
-
-                <h3 class="text-xl font-semibold mb-4">Call Analytics Overview</h3>
-
-                <div id="call-analytics-cards"
-                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
-
-                <div class="bg-white rounded-xl shadow-md p-6 border mb-6">
-                    <h3 class="text-lg font-semibold mb-4">Daily Call Trends</h3>
-                    <canvas id="callTrendChart"></canvas>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-md p-6 border">
-                    <h3 class="text-lg font-semibold mb-4">User-wise Call Summary</h3>
-
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full">
-                            <thead>
-                            <tr class="bg-gray-100 uppercase text-sm">
-                                <th class="px-4 py-3">User</th>
-                                <th class="px-4 py-3">Incoming</th>
-                                <th class="px-4 py-3">Outgoing</th>
-                                <th class="px-4 py-3">Missed</th>
-                                <th class="px-4 py-3">Duration</th>
-                            </tr>
-                            </thead>
-                            <tbody id="call-analytics-table"
-                                   class="divide-y divide-gray-200"></tbody>
-                        </table>
-                    </div>
-
-                </div>
-
-            </div>
-        </section>
-
-        <!-- ********** PERFORMANCE SECTION ********** -->
-        <section id="performance-section" class="hidden">
-            <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
-
-                <h3 class="text-xl font-semibold mb-6">Performance Analytics</h3>
-
-                <canvas id="performanceBarChart" class="w-full h-96"></canvas>
-
-            </div>
-        </section>
-
-    </div>
-</main>
-
-
-<!-- ********** USER DATA MODAL ********** -->
-<div id="user-data-modal"
-     class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-lg w-11/12 md:w-3/4 lg:w-1/2 max-h-[80vh] overflow-y-auto p-6">
-
-        <div class="flex justify-between items-center border-b pb-3">
-            <h3 class="text-xl font-semibold">User Data</h3>
-            <button onclick="usersManager.closeUserDataModal()"
-                    class="text-gray-500 hover:text-red-500">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-
-        <div id="user-data-content" class="mt-4 space-y-6"></div>
-
-    </div>
 </div>
 
-
-<!-- ======================= JS CONNECTIONS ======================= -->
+<!-- ========== JS SCRIPT FILES ========== -->
 <script src="/admin/js/auth.js"></script>
 <script src="/admin/js/dashboard.js"></script>
 <script src="/admin/js/users.js"></script>
-<script src="/admin/js/attendance.js"></script>
-<script src="/admin/js/call_history.js"></script>
-<script src="/admin/js/call_analytics.js"></script>
-<script src="/admin/js/performance.js"></script>
 
-<!-- SIDEBAR & NAVIGATION HANDLERS -->
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-
-    const sidebar = document.getElementById("sidebar");
-    const overlay = document.getElementById("overlay");
-    const openBtn = document.getElementById("openSidebarBtn");
-    const closeBtn = document.getElementById("closeSidebarBtn");
-
-    openBtn.onclick = () => {
-        sidebar.classList.remove("-translate-x-full");
-        overlay.classList.remove("hidden");
+    /* ============= MENU HANDLER ============= */
+    const sections = {
+        dashboard: sectionDashboard,
+        users: sectionUsers,
+        createUser: sectionCreateUser,
+        attendance: sectionAttendance,
+        callHistory: sectionCallHistory,
+        performance: sectionPerformance,
     };
 
-    closeBtn.onclick = () => {
-        sidebar.classList.add("-translate-x-full");
-        overlay.classList.add("hidden");
-    };
-
-    overlay.onclick = () => {
-        sidebar.classList.add("-translate-x-full");
-        overlay.classList.add("hidden");
-    };
-
-    const navItems = document.querySelectorAll(".nav-item");
-    const sections = [
-        "dashboard", "users", "attendance",
-        "call-history", "call-analytics", "performance"
-    ];
-
-    function showSection(section) {
-        sections.forEach(sec => {
-            const el = document.getElementById(`${sec}-section`);
-            if (el) el.classList.add("hidden");
-        });
-        document.getElementById(`${section}-section`).classList.remove("hidden");
-
-        if (section === "users") usersManager.loadUsers();
-        if (section === "attendance") adminDashboard.loadAttendance();
-        if (section === "call-history") callHistoryManager.loadCalls();
-        if (section === "call-analytics") callAnalyticsManager.loadAnalytics();
-        if (section === "performance") performanceManager.loadPerformance();
+    function hideAll() {
+        Object.values(sections).forEach(sec => sec.classList.add("hidden-section"));
+        document.querySelectorAll(".menu-item").forEach(m => m.classList.remove("active-menu"));
     }
 
-    navItems.forEach(item => {
-        item.addEventListener("click", (e) => {
-            e.preventDefault();
-            navItems.forEach(n => n.classList.remove("active"));
-            item.classList.add("active");
-            const section = item.getAttribute("href").replace("#", "");
-            showSection(section);
-        });
-    });
+    menuDashboard.onclick = () => {
+        hideAll();
+        sectionDashboard.classList.remove("hidden-section");
+        menuDashboard.classList.add("active-menu");
+        dashboard.init();
+    };
 
-});
+    menuUsers.onclick = () => {
+        hideAll();
+        sectionUsers.classList.remove("hidden-section");
+        menuUsers.classList.add("active-menu");
+        usersManager.loadUsers();
+    };
+
+    menuCreateUser.onclick = () => {
+        hideAll();
+        sectionCreateUser.classList.remove("hidden-section");
+        menuCreateUser.classList.add("active-menu");
+    };
+
+    menuAttendance.onclick = () => {
+        hideAll();
+        sectionAttendance.classList.remove("hidden-section");
+        menuAttendance.classList.add("active-menu");
+        // ADD API CALL
+    };
+
+    menuCallHistory.onclick = () => {
+        hideAll();
+        sectionCallHistory.classList.remove("hidden-section");
+        menuCallHistory.classList.add("active-menu");
+        // ADD API CALL
+    };
+
+    menuPerformance.onclick = () => {
+        hideAll();
+        sectionPerformance.classList.remove("hidden-section");
+        menuPerformance.classList.add("active-menu");
+        // ADD API CALL
+    };
+
+    logoutBtn.onclick = () => auth.logout();
 </script>
 
 </body>
