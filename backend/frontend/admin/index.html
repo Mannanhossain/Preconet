@@ -1,303 +1,372 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Call Manager Pro - Admin</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard – Call Manager Pro</title>
+
+    <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- ChartJS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        .sidebar { 
-            transition: all 0.3s ease; 
-            transform: translateX(-100%);
-            z-index: 50;
+        /* Glass Sidebar */
+        .glass {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
-        .sidebar.active {
-            transform: translateX(0);
+
+        .nav-item.active {
+            background: rgba(59,130,246,0.15);
+            border-right: 4px solid #3b82f6;
         }
-        .nav-item.active { 
-            background: rgba(34, 197, 94, 0.1); 
-            border-right: 4px solid #22c55e;
+
+        .floating-card {
+            transition: 0.3s ease;
         }
-        .stat-card { transition: transform 0.3s ease; }
-        .stat-card:hover { transform: translateY(-5px); }
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 40;
-        }
-        .overlay.active {
-            display: block;
-        }
-        @media (min-width: 1024px) {
-            .sidebar {
-                transform: translateX(0);
-            }
-            .overlay {
-                display: none !important;
-            }
+        .floating-card:hover {
+            transform: translateY(-6px);
         }
     </style>
 </head>
-<body class="bg-gray-50 flex h-screen">
-    <!-- Mobile Overlay -->
-    <div class="overlay" id="mobile-overlay"></div>
+
+<body class="bg-gray-100 flex h-screen overflow-hidden">
+
+    <!-- Slide Overlay (Mobile) -->
+    <div id="overlay" class="fixed inset-0 bg-black/40 hidden z-40"></div>
 
     <!-- Sidebar -->
-    <div class="sidebar bg-white shadow-lg w-64 lg:w-64 fixed h-full">
-        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+    <aside id="sidebar" class="glass w-64 fixed h-full left-0 top-0 z-50 transform -translate-x-full lg:translate-x-0 transition-all duration-300">
+
+        <div class="p-6 border-b border-white/20 flex items-center justify-between">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-phone-alt text-white text-lg"></i>
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-md">
+                    <i class="fas fa-phone text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-gray-800">Call Manager Pro</h1>
-                    <p class="text-xs text-gray-500">Admin Panel</p>
+                    <h1 class="text-lg font-bold text-gray-800">Call Manager Pro</h1>
+                    <p class="text-xs text-gray-600">Admin Panel</p>
                 </div>
             </div>
-            <button class="lg:hidden text-gray-500 hover:text-gray-700" id="close-sidebar">
-                <i class="fas fa-times text-lg"></i>
+            <button id="closeSidebarBtn" class="lg:hidden text-gray-600">
+                <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <nav class="mt-8">
-            <a href="#dashboard" class="nav-item active flex items-center space-x-3 px-6 py-3 text-gray-700 hover:bg-green-50 transition-colors">
-                <i class="fas fa-chart-pie w-5"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="#users" class="nav-item flex items-center space-x-3 px-6 py-3 text-gray-700 hover:bg-green-50 transition-colors">
-                <i class="fas fa-users w-5"></i>
-                <span>Manage Users</span>
-            </a>
-            <a href="#performance" class="nav-item flex items-center space-x-3 px-6 py-3 text-gray-700 hover:bg-green-50 transition-colors">
+        <nav class="mt-6">
+            <a href="#dashboard" class="nav-item active flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
                 <i class="fas fa-chart-line w-5"></i>
-                <span>Performance</span>
+                <span class="ml-3">Dashboard</span>
+            </a>
+
+            <a href="#users" class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+                <i class="fas fa-users w-5"></i>
+                <span class="ml-3">Users</span>
+            </a>
+
+            <a href="#attendance" class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+                <i class="fas fa-id-card w-5"></i>
+                <span class="ml-3">Attendance</span>
+            </a>
+
+            <a href="#performance" class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+                <i class="fas fa-chart-bar w-5"></i>
+                <span class="ml-3">Performance</span>
             </a>
         </nav>
 
-        <div class="absolute bottom-0 w-full p-4 border-t border-gray-200">
-            <div class="flex items-center space-x-3 px-2">
-                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <i class="fas fa-user-cog text-green-600 text-sm"></i>
+        <!-- Bottom User -->
+        <div class="absolute bottom-0 w-full border-t border-white/20 p-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-blue-600"></i>
                 </div>
                 <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-800" id="current-admin-name">Loading...</p>
+                    <p id="current-admin-name" class="font-medium text-gray-800 text-sm">Loading...</p>
                     <p class="text-xs text-gray-500">Admin</p>
                 </div>
-                <button id="logout-btn" class="text-gray-400 hover:text-red-500 transition-colors">
+                <button id="logout-btn-sidebar" class="text-gray-400 hover:text-red-600">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
             </div>
         </div>
-    </div>
 
-    <!-- Main Content -->
-    <div class="main-content lg:ml-64 flex-1 overflow-auto w-full">
-        <header class="bg-white shadow-sm border-b border-gray-200">
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 lg:ml-64 overflow-y-auto h-screen bg-gray-100">
+
+        <!-- Top Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
             <div class="flex justify-between items-center px-4 lg:px-8 py-4">
                 <div class="flex items-center space-x-4">
-                    <button class="lg:hidden text-gray-500 hover:text-gray-700" id="hamburger-menu">
+                    <button id="openSidebarBtn" class="lg:hidden text-gray-600">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
+
                     <div>
-                        <h2 class="text-xl lg:text-2xl font-bold text-gray-800" id="page-title">Admin Dashboard</h2>
-                        <p class="text-sm lg:text-base text-gray-600" id="page-subtitle">Manage your team and track performance</p>
+                        <h2 id="page-title" class="text-xl font-bold text-gray-800">
+                            Dashboard Overview
+                        </h2>
+                        <p id="page-subtitle" class="text-gray-500 text-sm">
+                            Your system summary and insights.
+                        </p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <div class="relative">
-                        <i class="fas fa-bell text-gray-400 text-xl"></i>
-                        <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-                    </div>
-                </div>
+
+                <button id="logout-btn-header"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center space-x-2">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="hidden sm:inline">Logout</span>
+                </button>
             </div>
         </header>
 
+        <!-- PAGE CONTENT -->
         <div class="p-4 lg:p-8">
-            <!-- Stats Grid -->
-            <div id="stats-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
-                <!-- Stats will be loaded here -->
-            </div>
 
-            <!-- Main Content -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-                <!-- Create User Form -->
-                <div class="lg:col-span-2">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-                        <div class="flex items-center justify-between mb-4 lg:mb-6">
-                            <h3 class="text-lg font-semibold text-gray-800">Create New User</h3>
-                            <div class="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-user-plus text-green-600"></i>
-                            </div>
-                        </div>
-                        <form id="createUserForm" class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                                    <input type="text" id="userName" class="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Enter full name" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                                    <input type="email" id="userEmail" class="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Enter email" required>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                                    <input type="tel" id="userPhone" class="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Enter phone number">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                                    <input type="password" id="userPassword" class="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Enter password" value="123456">
-                                </div>
-                            </div>
-                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2">
-                                <i class="fas fa-user-plus"></i>
-                                <span>Create User Account</span>
-                            </button>
-                        </form>
-                    </div>
+            <!-- DASHBOARD SECTION -->
+            <section id="dashboard-section">
+                <!-- Stats Grid -->
+                <div id="stats-cards"
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Cards will be added automatically by dashboard.js -->
                 </div>
 
-                <!-- Performance Chart -->
-                <div class="lg:col-span-1">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-                        <div class="flex items-center justify-between mb-4 lg:mb-6">
-                            <h3 class="text-lg font-semibold text-gray-800">Performance Overview</h3>
+                <!-- Main Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- LEFT: User Performance Chart -->
+                    <div class="lg:col-span-2 floating-card bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">User Performance</h3>
+                        
+                        <div class="w-full h-72">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Recent User Sync -->
+                    <div class="floating-card bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-800">Recent User Sync</h3>
                             <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-chart-line text-blue-600"></i>
+                                <i class="fas fa-sync text-blue-600"></i>
                             </div>
                         </div>
-                        <div id="performance-chart" class="space-y-4 max-h-96 overflow-y-auto">
-                            <!-- Performance stats will be loaded here -->
+
+                        <div id="recent-sync-list" class="mt-4 space-y-4 max-h-80 overflow-y-auto">
+                            <!-- Filled via dashboard.js -->
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Users Management Section -->
-            <div id="users-section" class="mt-6 lg:mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6" style="display: none;">
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-4 lg:mb-6 space-y-3 lg:space-y-0">
-                    <h3 class="text-lg font-semibold text-gray-800">Users Management</h3>
-                    <div class="flex space-x-2 lg:space-x-3">
-                        <button class="px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2 text-sm lg:text-base">
-                            <i class="fas fa-download"></i>
-                            <span class="hidden sm:inline">Export</span>
-                        </button>
-                        <button onclick="usersManager.loadUsers()" class="px-3 lg:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 text-sm lg:text-base">
+                </div>
+            </section>
+
+            <!-- USERS SECTION -->
+            <section id="users-section" class="hidden">
+                <div class="floating-card bg-white rounded-xl shadow-md p-6 border border-gray-200 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-800">Users Management</h3>
+                        <button onclick="usersManager.loadUsers()"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
                             <i class="fas fa-sync-alt"></i>
-                            <span class="hidden sm:inline">Refresh</span>
+                            <span>Refresh</span>
                         </button>
                     </div>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-max">
-                        <thead>
-                            <tr class="bg-gray-50 border-b border-gray-200">
-                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Contact</th>
-                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
-                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Status</th>
-                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-table-body" class="divide-y divide-gray-200">
-                            <!-- Users will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            <!-- Performance Section -->
-            <div id="performance-section" class="mt-6 lg:mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6" style="display: none;">
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-4 lg:mb-6 space-y-3 lg:space-y-0">
-                    <h3 class="text-lg font-semibold text-gray-800">Performance Analytics</h3>
-                    <div class="flex space-x-2 lg:space-x-3">
-                        <button onclick="performanceManager.loadPerformance()" class="px-3 lg:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 text-sm lg:text-base">
-                            <i class="fas fa-sync-alt"></i>
-                            <span class="hidden sm:inline">Refresh</span>
-                        </button>
+                    <div class="overflow-x-auto mt-4">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="bg-gray-100 text-left text-gray-600 text-sm uppercase">
+                                    <th class="px-4 py-3">User</th>
+                                    <th class="px-4 py-3">Phone</th>
+                                    <th class="px-4 py-3">Performance</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body" class="divide-y divide-gray-200">
+                                <!-- Filled by usersManager.renderUsers() -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <canvas id="performanceChart" width="400" height="200"></canvas>
+            </section>
+
+            <!-- ATTENDANCE SECTION -->
+            <section id="attendance-section" class="hidden">
+                <div class="floating-card bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-800">Attendance Records</h3>
+                        <button onclick="adminDashboard.loadAttendance()"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="bg-gray-100 text-left text-gray-600 text-sm uppercase">
+                                    <th class="px-4 py-3">Name</th>
+                                    <th class="px-4 py-3">Date</th>
+                                    <th class="px-4 py-3">Check In</th>
+                                    <th class="px-4 py-3">Check Out</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3">Location</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-table-body" class="divide-y divide-gray-200">
+                                <!-- Filled by dashboard.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PERFORMANCE SECTION -->
+            <section id="performance-section" class="hidden">
+                <div class="floating-card bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Performance Analytics</h3>
+
+                    <div class="w-full h-96">
+                        <canvas id="performanceBarChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- USER DATA MODAL -->
+            <div id="user-data-modal"
+                 class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
+                <div class="bg-white rounded-xl shadow-lg w-11/12 md:w-3/4 lg:w-1/2 max-h-[80vh] overflow-y-auto p-6">
+
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="text-xl font-semibold text-gray-800">User Data</h3>
+                        <button onclick="adminDashboard.closeUserDataModal()"
+                                class="text-gray-500 hover:text-red-500">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div id="user-data-content" class="mt-4 space-y-6">
+                        <!-- Filled dynamically -->
+                    </div>
+
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <!-- User Data Modal -->
-    <div id="user-data-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-4 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="text-xl font-semibold text-gray-800">User Sync Data</h3>
-                <button id="close-user-data-modal" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-            </div>
-            <div id="user-data-content" class="mt-4 max-h-96 overflow-y-auto">
-                <!-- User data will be loaded here -->
-            </div>
-        </div>
-    </div>
+    <!-- ============================= -->
+    <!--  ADMIN DASHBOARD JS SCRIPTS  -->
+    <!-- ============================= -->
 
     <script>
-        // Mobile sidebar functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const hamburger = document.getElementById('hamburger-menu');
-            const closeSidebar = document.getElementById('close-sidebar');
-            const sidebar = document.querySelector('.sidebar');
-            const overlay = document.getElementById('mobile-overlay');
+    // SIDEBAR + OVERLAY TOGGLE
+    document.addEventListener("DOMContentLoaded", function () {
 
-            function openSidebar() {
-                sidebar.classList.add('active');
-                overlay.classList.add('active');
-                document.body.style.overflow = 'hidden';
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("overlay");
+        const openBtn = document.getElementById("openSidebarBtn");
+        const closeBtn = document.getElementById("closeSidebarBtn");
+
+        function openSidebar() {
+            sidebar.classList.remove("-translate-x-full");
+            overlay.classList.remove("hidden");
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeSidebar() {
+            sidebar.classList.add("-translate-x-full");
+            overlay.classList.add("hidden");
+            document.body.style.overflow = "auto";
+        }
+
+        openBtn.addEventListener("click", openSidebar);
+        closeBtn.addEventListener("click", closeSidebar);
+        overlay.addEventListener("click", closeSidebar);
+
+        // Close on resize (desktop mode)
+        window.addEventListener("resize", () => {
+            if (window.innerWidth >= 1024) {
+                sidebar.classList.remove("-translate-x-full");
+                overlay.classList.add("hidden");
             }
-
-            function closeSidebarFunc() {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
-                document.body.style.overflow = 'auto';
-            }
-
-            hamburger.addEventListener('click', openSidebar);
-            closeSidebar.addEventListener('click', closeSidebarFunc);
-            overlay.addEventListener('click', closeSidebarFunc);
-
-            // Close sidebar when clicking on nav items on mobile
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    if (window.innerWidth < 1024) {
-                        closeSidebarFunc();
-                    }
-                });
-            });
-
-            // Handle window resize
-            window.addEventListener('resize', () => {
-                if (window.innerWidth >= 1024) {
-                    sidebar.classList.add('active');
-                    overlay.classList.remove('active');
-                    document.body.style.overflow = 'auto';
-                } else {
-                    sidebar.classList.remove('active');
-                }
-            });
         });
+    });
     </script>
 
+    <script>
+    // PAGE NAVIGATION HANDLER
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const navItems = document.querySelectorAll(".nav-item");
+        const sections = ["dashboard", "users", "attendance", "performance"];
+
+        function showSection(section) {
+            sections.forEach(sec => {
+                const el = document.getElementById(`${sec}-section`);
+                if (el) el.classList.add("hidden");
+            });
+
+            document.getElementById(`${section}-section`).classList.remove("hidden");
+
+            // Load data for each section
+            if (section === "users") usersManager.loadUsers();
+            if (section === "attendance") adminDashboard.loadAttendance();
+            if (section === "performance") performanceManager.loadPerformance();
+        }
+
+        navItems.forEach(item => {
+            item.addEventListener("click", (e) => {
+                e.preventDefault();
+
+                navItems.forEach(n => n.classList.remove("active"));
+                item.classList.add("active");
+
+                const section = item.getAttribute("href").replace("#", "");
+                showSection(section);
+            });
+        });
+    });
+    </script>
+
+    <script>
+    // LOGOUT HANDLER
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const sideLogout = document.getElementById("logout-btn-sidebar");
+        const headerLogout = document.getElementById("logout-btn-header");
+
+        const logout = () => {
+            sessionStorage.removeItem("admin_token");
+            sessionStorage.removeItem("admin_user");
+
+            alert("Logged out successfully!");
+            window.location.href = "/admin/login.html";
+        };
+
+        sideLogout.addEventListener("click", logout);
+        headerLogout.addEventListener("click", logout);
+    });
+    </script>
+
+    <!-- ============================= -->
+    <!--  LINK JS MANAGERS & SERVICES -->
+    <!-- ============================= -->
     <script src="/admin/js/auth.js"></script>
     <script src="/admin/js/dashboard.js"></script>
     <script src="/admin/js/users.js"></script>
     <script src="/admin/js/performance.js"></script>
+    <script src="/admin/js/attendance.js"></script>
+
 </body>
 </html>
