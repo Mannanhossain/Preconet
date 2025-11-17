@@ -1,87 +1,30 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
-from ..models import db, SuperAdmin, Admin, User, ActivityLog, UserRole
+from flask_jwt_extended import (
+    jwt_required,
+    create_access_token,
+    get_jwt_identity
+)
 from datetime import datetime
+from ..models import db, SuperAdmin, Admin, User, ActivityLog, UserRole
 import re
 
 bp = Blueprint("super_admin", __name__, url_prefix="/api/superadmin")
 
 
 # =========================================================
-# AUTO-CREATE DEFAULT SUPER ADMIN
-# =========================================================
-def create_default_super_admin():
-    default_email = "super@callmanager.com"
-    default_password = "admin123"
-
-
-    existing = SuperAdmin.query.filter_by(email=default_email).first()
-    if existing:
-        print("✔ Default SuperAdmin already exists.")
-        return
-
-    super_admin = SuperAdmin(
-        name="Master Super Admin",
-        email=default_email,
-    )
-    super_admin.set_password(default_password)
-
-    db.session.add(super_admin)
-    db.session.commit()
-
-    print("🔥 Default SuperAdmin created:")
-    print("   Email:", default_email)
-    print("   Password:", default_password)
-
-
-# =========================================================
 # HELPERS
 # =========================================================
 def _validate_email(email: str) -> bool:
-    if not email:
-        return False
     pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    return re.match(pattern, email) is not None
+    return re.match(pattern, email or "") is not None
 
 
-def _safe_actor_role(role_field):
+def _safe_enum_value(role):
+    """Convert enum to plain string"""
     try:
-        return role_field.value  # if enum
+        return role.value
     except:
-        return str(role_field)
-
-
-# =========================================================
-# REGISTER SUPER ADMIN (ONLY ONCE)
-# =========================================================
-@bp.route("/register", methods=["POST"])
-def register():
-    try:
-        data = request.get_json() or {}
-        name = data.get("name")
-        email = data.get("email")
-        password = data.get("password")
-
-        if not name or not email or not password:
-            return jsonify({"error": "name, email and password are required"}), 400
-
-        if not _validate_email(email):
-            return jsonify({"error": "invalid email format"}), 400
-
-        if SuperAdmin.query.first():
-            return jsonify({"error": "super admin already exists"}), 400
-
-        super_admin = SuperAdmin(name=name, email=email)
-        super_admin.set_password(password)
-
-        db.session.add(super_admin)
-        db.session.commit()
-
-        return jsonify({"message": "Super admin created successfully"}), 201
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return str(role)
 
 
 # =========================================================
@@ -89,36 +32,31 @@ def register():
 # =========================================================
 @bp.route("/login", methods=["POST"])
 def login():
-    try:
-        data = request.get_json() or {}
-        email = data.get("email")
-        password = data.get("password")
+    data = request.get_json() or {}
+    email = data.get("email")
+    password = data.get("password")
 
-        if not email or not password:
-            return jsonify({"error": "email and password required"}), 400
+    if not email or not password:
+        return jsonify({"error": "Email and password required"}), 400
 
-        super_admin = SuperAdmin.query.filter_by(email=email).first()
-        if not super_admin or not super_admin.check_password(password):
-            return jsonify({"error": "Invalid credentials"}), 401
+    super_admin = SuperAdmin.query.filter_by(email=email).first()
+    if not super_admin or not super_admin.check_password(password):
+        return jsonify({"error": "Invalid credentials"}), 401
 
-        token = create_access_token(
-            identity=str(super_admin.id), additional_claims={"role": "super_admin"}
-        )
+    token = create_access_token(
+        identity=str(super_admin.id),
+        additional_claims={"role": "super_admin"}
+    )
 
-        return jsonify(
-            {
-                "access_token": token,
-                "user": {
-                    "id": super_admin.id,
-                    "name": super_admin.name,
-                    "email": super_admin.email,
-                    "role": "super_admin",
-                },
-            }
-        ), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify({
+        "access_token": token,
+        "user": {
+            "id": super_admin.id,
+            "name": super_admin.name,
+            "email": super_admin.email,
+            "role": "super_admin",
+        }
+    }), 200
 
 
 # =========================================================
@@ -127,92 +65,85 @@ def login():
 @bp.route("/create-admin", methods=["POST"])
 @jwt_required()
 def create_admin():
+    super_admin_id = get_jwt_identity()
+
+    if not SuperAdmin.query.get(super_admin_id):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    name = data.get("name")
+    email = data.get("email")
+    password = data.get("password")
+    user_limit = int(data.get("user_limit", 10))
+    expiry_date = data.get("expiry_date")
+
+    if not all([name, email, password, expiry_date]):
+        return jsonify({"error": "All fields required"}), 400
+
+    if not _validate_email(email):
+        return jsonify({"error": "Invalid email format"}), 400
+
+    if Admin.query.filter_by(email=email).first():
+        return jsonify({"error": "Admin email already exists"}), 400
+
     try:
-        current_super_admin_id = int(get_jwt_identity())
-        if not SuperAdmin.query.get(current_super_admin_id):
-            return jsonify({"error": "Unauthorized"}), 401
+        expiry_date = datetime.strptime(expiry_date, "%Y-%m-%d")
+    except:
+        return jsonify({"error": "expiry_date must be YYYY-MM-DD"}), 400
 
-        data = request.get_json() or {}
-        name = data.get("name")
-        email = data.get("email")
-        password = data.get("password")
-        user_limit = int(data.get("user_limit", 10))
-        expiry_date_str = data.get("expiry_date")
+    new_admin = Admin(
+        name=name,
+        email=email,
+        user_limit=user_limit,
+        expiry_date=expiry_date,
+        created_by=super_admin_id,
+    )
+    new_admin.set_password(password)
 
-        if not name or not email or not password or not expiry_date_str:
-            return jsonify(
-                {"error": "name, email, password and expiry_date are required"}), 400
+    db.session.add(new_admin)
+    db.session.commit()
 
-        if not _validate_email(email):
-            return jsonify({"error": "invalid email format"}), 400
+    # Activity Logging
+    log = ActivityLog(
+        actor_role=UserRole.SUPER_ADMIN,
+        actor_id=super_admin_id,
+        action=f"Created Admin: {name}",
+        target_type="admin",
+        target_id=new_admin.id
+    )
+    db.session.add(log)
+    db.session.commit()
 
-        if Admin.query.filter_by(email=email).first():
-            return jsonify({"error": "email already exists"}), 400
-
-        try:
-            expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d")
-        except ValueError:
-            return jsonify({"error": "expiry_date must be YYYY-MM-DD"}), 400
-
-        admin = Admin(
-            name=name,
-            email=email,
-            user_limit=user_limit,
-            expiry_date=expiry_date,
-            created_by=current_super_admin_id,
-        )
-        admin.set_password(password)
-
-        db.session.add(admin)
-        db.session.commit()
-
-        log = ActivityLog(
-            actor_role=UserRole.SUPER_ADMIN,
-            actor_id=current_super_admin_id,
-            action=f"Created admin: {admin.name}",
-            target_type="admin",
-            target_id=admin.id,
-        )
-        db.session.add(log)
-        db.session.commit()
-
-        return jsonify({"message": "Admin created successfully"}), 201
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+    return jsonify({"message": "Admin created successfully"}), 201
 
 
 # =========================================================
-# GET ALL ADMINS
+# GET ALL ADMINS  (SUPERADMIN DASHBOARD)
 # =========================================================
 @bp.route("/admins", methods=["GET"])
 @jwt_required()
 def get_admins():
     try:
         admins = Admin.query.order_by(Admin.created_at.desc()).all()
-        admin_list = []
+        result = []
 
-        for admin in admins:
-            user_count = User.query.filter_by(admin_id=admin.id).count()
-            admin_list.append(
-                {
-                    "id": admin.id,
-                    "name": admin.name,
-                    "email": admin.email,
-                    "user_limit": admin.user_limit,
-                    "expiry_date": admin.expiry_date.isoformat(),
-                    "created_at": admin.created_at.isoformat(),
-                    "last_login": admin.last_login.isoformat()
-                    if admin.last_login
-                    else None,
-                    "is_active": admin.is_active,
-                    "user_count": user_count,
-                    "is_expired": admin.is_expired(),
-                }
-            )
+        for a in admins:
+            user_count = User.query.filter_by(admin_id=a.id).count()
 
-        return jsonify({"admins": admin_list}), 200
+            result.append({
+                "id": a.id,
+                "name": a.name,
+                "email": a.email,
+                "user_limit": a.user_limit,
+                "user_count": user_count,
+                "is_active": a.is_active,
+                "is_expired": a.is_expired(),
+                "created_at": a.created_at.isoformat(),
+                "last_login": a.last_login.isoformat() if a.last_login else None,
+                "expiry_date": a.expiry_date.isoformat()
+            })
+
+        return jsonify({"admins": result}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -227,9 +158,9 @@ def dashboard_stats():
     try:
         stats = {
             "total_admins": Admin.query.count(),
-            "total_users": User.query.count(),
             "active_admins": Admin.query.filter_by(is_active=True).count(),
             "expired_admins": Admin.query.filter(Admin.expiry_date < datetime.utcnow()).count(),
+            "total_users": User.query.count(),
         }
 
         return jsonify({"stats": stats}), 200
@@ -243,24 +174,23 @@ def dashboard_stats():
 # =========================================================
 @bp.route("/logs", methods=["GET"])
 @jwt_required()
-def get_logs():
+def activity_logs():
     try:
-        logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).all()
+        logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(50).all()
 
-        data = [
-            {
+        formatted = []
+        for log in logs:
+            formatted.append({
                 "id": log.id,
-                "actor_role": _safe_actor_role(log.actor_role),
-                "actor_id": log.actor_id,
                 "action": log.action,
+                "actor_role": _safe_enum_value(log.actor_role),
+                "actor_id": log.actor_id,
                 "target_type": log.target_type,
                 "target_id": log.target_id,
-                "timestamp": log.timestamp.isoformat(),
-            }
-            for log in logs
-        ]
+                "timestamp": log.timestamp.isoformat()
+            })
 
-        return jsonify({"logs": data}), 200
+        return jsonify({"logs": formatted}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
