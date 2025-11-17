@@ -1,190 +1,359 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Dashboard – Call Manager Pro</title>
 
-    <!-- Tailwind CSS -->
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- ChartJS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        .sidebar-item.active {
-            background: rgba(59, 130, 246, 0.15);
-            border-left: 4px solid #3b82f6;
-        }
-
         .glass {
+            background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(12px);
-            background: rgba(255, 255, 255, 0.75);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
-
-        .hover-card:hover {
-            transform: translateY(-5px);
-            transition: 0.25s ease;
+        .nav-item.active {
+            background: rgba(59,130,246,0.15);
+            border-right: 4px solid #3b82f6;
+        }
+        .floating-card {
+            transition: 0.3s ease;
+        }
+        .floating-card:hover {
+            transform: translateY(-6px);
         }
     </style>
 </head>
 
-<body class="bg-gray-100">
+<body class="bg-gray-100 flex h-screen overflow-hidden">
 
-    <!-- MAIN LAYOUT -->
-    <div class="flex h-screen overflow-hidden">
+<!-- OVERLAY -->
+<div id="overlay" class="fixed inset-0 bg-black/40 hidden z-40"></div>
 
-        <!-- SIDEBAR -->
-        <aside class="w-64 glass shadow-xl border-r border-gray-200 hidden md:block">
-            <div class="p-6">
-                <div class="flex items-center space-x-3">
-                    <div class="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                        <i class="fas fa-phone-volume text-white text-xl"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-bold text-gray-800">Call Manager</h1>
-                        <p class="text-sm text-gray-500">Admin Console</p>
-                    </div>
-                </div>
+<!-- SIDEBAR -->
+<aside id="sidebar"
+       class="glass w-64 fixed h-full left-0 top-0 z-50 transform -translate-x-full lg:translate-x-0 transition-all">
+
+    <div class="p-6 border-b border-white/20 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-md">
+                <i class="fas fa-phone text-white"></i>
             </div>
-
-            <!-- MENU -->
-            <nav class="mt-6">
-                <div class="sidebar-item active flex items-center px-6 py-3 cursor-pointer hover:bg-blue-50"
-                    data-section="dashboard">
-                    <i class="fas fa-chart-pie w-6"></i>
-                    <span class="ml-3">Dashboard</span>
-                </div>
-
-                <div class="sidebar-item flex items-center px-6 py-3 cursor-pointer hover:bg-blue-50"
-                    data-section="users">
-                    <i class="fas fa-users w-6"></i>
-                    <span class="ml-3">Users</span>
-                </div>
-
-                <div class="sidebar-item flex items-center px-6 py-3 cursor-pointer hover:bg-blue-50"
-                    data-section="attendance">
-                    <i class="fas fa-calendar-check w-6"></i>
-                    <span class="ml-3">Attendance</span>
-                </div>
-
-                <div class="sidebar-item flex items-center px-6 py-3 cursor-pointer hover:bg-blue-50"
-                    data-section="performance">
-                    <i class="fas fa-chart-line w-6"></i>
-                    <span class="ml-3">Performance</span>
-                </div>
-            </nav>
-
-            <div class="absolute bottom-0 w-full p-4 border-t flex justify-between items-center">
-                <p class="text-sm text-gray-600">Admin</p>
-                <button id="logout-btn" class="text-red-600 hover:text-red-800">
-                    <i class="fas fa-sign-out-alt text-lg"></i>
-                </button>
+            <div>
+                <h1 class="text-lg font-bold text-gray-800">Call Manager Pro</h1>
+                <p class="text-xs text-gray-600">Admin Panel</p>
             </div>
-        </aside>
-
-        <!-- CONTENT -->
-        <main class="flex-1 overflow-y-auto">
-
-            <!-- HEADER -->
-            <header class="bg-gradient-to-r from-blue-600 to-blue-500 text-white p-6 shadow-lg">
-                <h2 id="page-title" class="text-2xl font-bold">Dashboard</h2>
-                <p id="page-subtitle" class="text-blue-100">Quick insights about your system</p>
-            </header>
-
-            <!-- SECTIONS CONTAINER -->
-            <div class="p-6 space-y-10">
-
-                <!-- ==================== DASHBOARD ==================== -->
-                <section id="dashboard-section">
-
-                    <div id="stats-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <!-- Dynamic stats cards -->
-                    </div>
-
-                    <div class="mt-10 bg-white p-6 shadow-md rounded-xl">
-                        <h3 class="text-lg font-semibold text-gray-700 mb-4">Performance Overview</h3>
-                        <div id="performance-chart"></div>
-                    </div>
-
-                </section>
-
-                <!-- ==================== USERS ==================== -->
-                <section id="users-section" class="hidden">
-
-                    <h3 class="text-xl font-bold text-gray-700 mb-4">Users</h3>
-
-                    <div class="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3">User</th>
-                                    <th class="px-4 py-3">Phone</th>
-                                    <th class="px-4 py-3">Status</th>
-                                    <th class="px-4 py-3">Performance</th>
-                                    <th class="px-4 py-3">Last Sync</th>
-                                    <th class="px-4 py-3 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-table-body"></tbody>
-                        </table>
-                    </div>
-
-                </section>
-
-                <!-- ==================== ATTENDANCE ==================== -->
-                <section id="attendance-section" class="hidden">
-
-                    <h3 class="text-xl font-bold text-gray-700 mb-4">Attendance</h3>
-
-                    <div class="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3">User</th>
-                                    <th class="px-4 py-3">Date</th>
-                                    <th class="px-4 py-3">Check In</th>
-                                    <th class="px-4 py-3">Check Out</th>
-                                    <th class="px-4 py-3">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="attendance-table-body"></tbody>
-                        </table>
-                    </div>
-
-                </section>
-
-                <!-- ==================== PERFORMANCE ==================== -->
-                <section id="performance-section" class="hidden">
-                    <h3 class="text-xl font-bold text-gray-700 mb-4">Performance Analytics</h3>
-
-                    <div class="bg-white p-6 rounded-xl shadow-md">
-                        <p class="text-gray-500">Visual performance charts coming soon...</p>
-                    </div>
-                </section>
-
-            </div>
-        </main>
+        </div>
+        <button id="closeSidebarBtn" class="lg:hidden text-gray-600">
+            <i class="fas fa-times"></i>
+        </button>
     </div>
 
-    <!-- USER DATA MODAL -->
-    <div id="user-data-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-        <div class="bg-white w-11/12 max-w-3xl p-6 rounded-xl shadow-xl relative">
-            <button id="close-user-data-modal"
-                class="absolute top-3 right-3 text-gray-500 hover:text-red-600 text-xl">
-                <i class="fas fa-times"></i>
-            </button>
+    <nav class="mt-6">
 
-            <h3 class="text-xl font-bold mb-4">User Details</h3>
-            <div id="user-data-content"></div>
+        <a href="#dashboard"
+           class="nav-item active flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+            <i class="fas fa-chart-line w-5"></i> <span class="ml-3">Dashboard</span>
+        </a>
+
+        <a href="#users"
+           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+            <i class="fas fa-users w-5"></i> <span class="ml-3">Users</span>
+        </a>
+
+        <a href="#attendance"
+           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+            <i class="fas fa-id-card w-5"></i> <span class="ml-3">Attendance</span>
+        </a>
+
+        <a href="#call-history"
+           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+            <i class="fas fa-phone-alt w-5"></i> <span class="ml-3">Call History</span>
+        </a>
+
+        <a href="#call-analytics"
+           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+            <i class="fas fa-chart-pie w-5"></i>
+            <span class="ml-3">Call Analytics</span>
+        </a>
+
+        <a href="#performance"
+           class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-100 transition">
+            <i class="fas fa-chart-bar w-5"></i> <span class="ml-3">Performance</span>
+        </a>
+
+    </nav>
+
+    <!-- Bottom User -->
+    <div class="absolute bottom-0 w-full border-t border-white/20 p-4">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-user text-blue-600"></i>
+            </div>
+            <div class="flex-1">
+                <p id="current-admin-name" class="font-medium text-gray-800 text-sm">Loading...</p>
+                <p class="text-xs text-gray-500">Admin</p>
+            </div>
+            <button id="logout-btn-sidebar" class="text-gray-400 hover:text-red-600">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
         </div>
     </div>
 
-    <!-- JS Imports -->
-    <script src="/admin/js/auth.js"></script>
-    <script src="/admin/js/dashboard.js"></script>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 lg:ml-64 overflow-y-auto h-screen bg-gray-100">
+
+    <!-- HEADER -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
+        <div class="flex justify-between items-center px-4 lg:px-8 py-4">
+            <div class="flex items-center space-x-4">
+
+                <button id="openSidebarBtn" class="lg:hidden text-gray-600">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+
+                <div>
+                    <h2 id="page-title" class="text-xl font-bold text-gray-800">
+                        Dashboard Overview
+                    </h2>
+                    <p id="page-subtitle" class="text-gray-500 text-sm">
+                        Your system summary and insights.
+                    </p>
+                </div>
+
+            </div>
+
+            <button id="logout-btn-header"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center space-x-2">
+                <i class="fas fa-sign-out-alt"></i> <span class="hidden sm:inline">Logout</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="p-4 lg:p-8">
+
+        <!-- ========================= DASHBOARD ======================= -->
+        <section id="dashboard-section">
+
+            <div id="stats-cards"
+                 class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 floating-card bg-white rounded-xl shadow-md p-6 border">
+                    <h3 class="text-lg font-semibold mb-4">User Performance</h3>
+                    <canvas id="performanceChart"></canvas>
+                </div>
+
+                <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
+                    <div class="flex justify-between">
+                        <h3 class="text-lg font-semibold">Recent User Sync</h3>
+                        <i class="fas fa-sync text-blue-600"></i>
+                    </div>
+                    <div id="recent-sync-list"
+                         class="mt-4 space-y-4 max-h-80 overflow-y-auto"></div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================= USERS ======================= -->
+        <section id="users-section" class="hidden">
+            <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">Users Management</h3>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-gray-100 text-left uppercase text-sm">
+                                <th class="px-4 py-3">User</th>
+                                <th class="px-4 py-3">Phone</th>
+                                <th class="px-4 py-3">Performance</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body"
+                               class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================= ATTENDANCE ==================== -->
+        <section id="attendance-section" class="hidden">
+            <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
+
+                <div class="flex justify-between mb-4">
+                    <h3 class="text-xl font-semibold">Attendance Records</h3>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-gray-100 text-left uppercase text-sm">
+                                <th class="px-4 py-3">Name</th>
+                                <th class="px-4 py-3">Date</th>
+                                <th class="px-4 py-3">Check In</th>
+                                <th class="px-4 py-3">Check Out</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Location</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-table-body"
+                               class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ======================= CALL HISTORY =================== -->
+        <section id="call-history-section" class="hidden">
+            <div class="floating-card bg-white rounded-xl shadow-md p-6 border">
+
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">Call History</h3>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                        <tr class="bg-gray-100 text-left uppercase text-sm">
+                            <th class="px-4 py-3">User</th>
+                            <th class="px-4 py-3">Number</th>
+                            <th class="px-4 py-3">Type</th>
+                            <th class="px-4 py-3">Duration</th>
+                            <th class="px-4 py-3">Timestamp</th>
+                        </tr>
+                        </thead>
+                        <tbody id="call-history-table"
+                               class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ======================= CALL ANALYTICS ================= -->
+        <section id="call-analytics-section" class="hidden">
+
+            <div class="floating-card bg-white rounded-xl shadow-md p-6 border mb-6">
+
+                <h3 class="text-xl font-semibold mb-4">Call Analytics Overview</h3>
+
+                <div id="call-analytics-cards"
+                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
+
+                <div class="bg-white rounded-xl shadow-md p-6 border mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Daily Call Trends</h3>
+                    <canvas id="callTrendChart"></canvas>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6 border">
+                    <h3 class="text-lg font-semibold mb-4">User-wise Call Summary</h3>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="bg-gray-100 text-left uppercase text-sm">
+                                    <th class="px-4 py-3">User</th>
+                                    <th class="px-4 py-3">Incoming</th>
+                                    <th class="px-4 py-3">Outgoing</th>
+                                    <th class="px-4 py-3">Missed</th>
+                                    <th class="px-4 py-3">Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody id="call-analytics-table"
+                                   class="divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<!-- JS -->
+<script src="/admin/js/auth.js"></script>
+<script src="/admin/js/dashboard.js"></script>
+<script src="/admin/js/users.js"></script>
+<script src="/admin/js/attendance.js"></script>
+<script src="/admin/js/call_history.js"></script>
+<script src="/admin/js/call_analytics.js"></script>
+<script src="/admin/js/performance.js"></script>
+
+<!-- SIDEBAR + NAVIGATION -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+    const openBtn = document.getElementById("openSidebarBtn");
+    const closeBtn = document.getElementById("closeSidebarBtn");
+
+    openBtn.addEventListener("click", () => {
+        sidebar.classList.remove("-translate-x-full");
+        overlay.classList.remove("hidden");
+    });
+
+    closeBtn.addEventListener("click", () => {
+        sidebar.classList.add("-translate-x-full");
+        overlay.classList.add("hidden");
+    });
+
+    overlay.addEventListener("click", () => {
+        sidebar.classList.add("-translate-x-full");
+        overlay.classList.add("hidden");
+    });
+
+    const navItems = document.querySelectorAll(".nav-item");
+    const sections = [
+        "dashboard", "users", "attendance",
+        "call-history", "call-analytics", "performance"
+    ];
+
+    function showSection(section) {
+        sections.forEach(sec => {
+            const el = document.getElementById(`${sec}-section`);
+            if (el) el.classList.add("hidden");
+        });
+
+        document.getElementById(`${section}-section`).classList.remove("hidden");
+
+        if (section === "users") usersManager.loadUsers();
+        if (section === "call-history") callHistoryManager.loadCalls();
+        if (section === "call-analytics") callAnalyticsManager.loadAnalytics();
+        if (section === "attendance") adminDashboard.loadAttendance();
+        if (section === "performance") performanceManager.loadPerformance();
+    }
+
+    navItems.forEach(item => {
+        item.addEventListener("click", (e) => {
+            e.preventDefault();
+            navItems.forEach(n => n.classList.remove("active"));
+            item.classList.add("active");
+            const section = item.getAttribute("href").replace("#", "");
+            showSection(section);
+        });
+    });
+});
+</script>
 
 </body>
-
 </html>
