@@ -270,7 +270,13 @@
     <script src="/super_admin/js/dashboard.js"></script>
     <script src="/super_admin/js/admins.js"></script>
     <script src="/super_admin/js/activity.js"></script>
+    <script>
+document.getElementById("logout-btn")?.addEventListener("click", () => auth.logout());
+document.getElementById("logout-btn-header")?.addEventListener("click", () => auth.logout());
+</script>
+
 
 </body>
 
 </html>
+
