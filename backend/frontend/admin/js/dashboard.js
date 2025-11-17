@@ -1,4 +1,5 @@
 class AdminDashboard {
+
     constructor() {
         this.stats = null;
         this.users = [];
@@ -8,6 +9,9 @@ class AdminDashboard {
         this.init();
     }
 
+    /* =========================================================================
+       INIT
+    ========================================================================= */
     async init() {
         if (!this.checkAuth()) return;
 
@@ -17,7 +21,8 @@ class AdminDashboard {
 
         this.setupNavigation();
         this.setupLogout();
-        this.setupModalClose();
+        this.setupModalListeners();
+
         this.showSection("dashboard");
     }
 
@@ -30,98 +35,96 @@ class AdminDashboard {
         return true;
     }
 
-    /* ============================================================
-       📌 LOAD ADMIN DASHBOARD STATS
-    ============================================================ */
+    /* =========================================================================
+       LOAD STATS
+    ========================================================================= */
     async loadStats() {
         try {
-            const resp = await auth.makeAuthenticatedRequest(`/api/admin/dashboard-stats`);
-            const data = await resp.json();
+            const res = await auth.makeAuthenticatedRequest("/api/admin/dashboard-stats");
+            const data = await res.json();
 
-            if (resp.ok) {
+            if (res.ok) {
                 this.stats = data.stats;
                 this.renderStats();
-                this.renderPerformanceOverview();
+                this.renderPerformance();
             }
         } catch (err) {
-            console.error("Stats Error:", err);
+            console.error("Stats error:", err);
         }
     }
 
-    /* ============================================================
-       📌 LOAD USERS
-    ============================================================ */
+    /* =========================================================================
+       LOAD USERS
+    ========================================================================= */
     async loadUsers() {
         try {
-            const resp = await auth.makeAuthenticatedRequest(`/api/admin/users`);
-            const data = await resp.json();
+            const res = await auth.makeAuthenticatedRequest("/api/admin/users");
+            const data = await res.json();
 
-            if (resp.ok) {
+            if (res.ok) {
                 this.users = data.users;
                 this.renderUsersTable();
             }
         } catch (err) {
-            console.error(err);
+            console.error("Users load error:", err);
         }
     }
 
-    /* ============================================================
-       📌 LOAD ATTENDANCE
-    ============================================================ */
+    /* =========================================================================
+       LOAD ATTENDANCE
+    ========================================================================= */
     async loadAttendance() {
         try {
-            const resp = await auth.makeAuthenticatedRequest(`/api/admin/attendance`);
-            const data = await resp.json();
+            const res = await auth.makeAuthenticatedRequest("/api/admin/attendance");
+            const data = await res.json();
 
-            if (resp.ok) {
+            if (res.ok) {
                 this.attendance = data.attendance;
                 this.renderAttendanceTable();
             }
         } catch (err) {
-            console.error(err);
+            console.error("Attendance load error:", err);
         }
     }
 
-    /* ============================================================
-       📌 RENDER STATS CARDS
-    ============================================================ */
+    /* =========================================================================
+       RENDER STATS CARDS
+    ========================================================================= */
     renderStats() {
         const div = document.getElementById("stats-cards");
         if (!div || !this.stats) return;
 
         const s = this.stats;
 
-        const stats = [
-            { label: "Total Users", value: s.total_users, icon: "users", color: "blue" },
-            { label: "Active Users", value: s.active_users, icon: "user-check", color: "green" },
-            { label: "Users With Sync", value: s.users_with_sync, icon: "sync", color: "purple" },
-            { label: "Remaining Slots", value: s.remaining_slots, icon: "user-plus", color: "yellow" }
-        ];
-
-        div.innerHTML = stats
-            .map(
-                (i) => `
+        div.innerHTML = `
             <div class="bg-white p-6 rounded-xl shadow">
-                <div class="flex justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">${i.label}</p>
-                        <p class="text-3xl font-bold">${i.value}</p>
-                    </div>
-                    <div class="h-12 w-12 rounded-xl bg-${i.color}-100 flex items-center justify-center text-${i.color}-600">
-                        <i class="fas fa-${i.icon} text-xl"></i>
-                    </div>
-                </div>
+                <p class="text-sm text-gray-600">Total Users</p>
+                <p class="text-3xl font-bold">${s.total_users}</p>
             </div>
-        `
-            )
-            .join("");
+
+            <div class="bg-white p-6 rounded-xl shadow">
+                <p class="text-sm text-gray-600">Active Users</p>
+                <p class="text-3xl font-bold">${s.active_users}</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow">
+                <p class="text-sm text-gray-600">Users with Sync</p>
+                <p class="text-3xl font-bold">${s.users_with_sync}</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow">
+                <p class="text-sm text-gray-600">Remaining Slots</p>
+                <p class="text-3xl font-bold">${s.remaining_slots}</p>
+            </div>
+        `;
     }
 
-    /* ============================================================
-       📌 PERFORMANCE
-    ============================================================ */
-    renderPerformanceOverview() {
+    /* =========================================================================
+       PERFORMANCE BOX
+    ========================================================================= */
+    renderPerformance() {
         const box = document.getElementById("performance-chart");
+
         if (!box || !this.stats) return;
 
         const s = this.stats;
@@ -131,8 +134,7 @@ class AdminDashboard {
             <p class="text-3xl font-bold">${s.avg_performance}%</p>
             <p class="text-sm text-gray-500">Average Performance</p>
 
-            <p class="mt-4">Users: ${s.total_users}/${s.user_limit}</p>
-            <div class="w-full bg-gray-200 h-2 rounded-full">
+            <div class="w-full bg-gray-200 h-2 rounded-full mt-4">
                 <div class="bg-green-600 h-2 rounded-full" style="width:${percent}%"></div>
             </div>
 
@@ -140,9 +142,9 @@ class AdminDashboard {
         `;
     }
 
-    /* ============================================================
-       📌 RENDER USERS TABLE
-    ============================================================ */
+    /* =========================================================================
+       USERS TABLE
+    ========================================================================= */
     renderUsersTable() {
         const body = document.getElementById("users-table-body");
         if (!body) return;
@@ -150,33 +152,16 @@ class AdminDashboard {
         body.innerHTML = this.users
             .map(
                 (u) => `
-            <tr class="hover:bg-gray-100">
+            <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3">
-                    <div class="flex items-center">
-                        <div class="h-10 w-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">${u.name[0]}</div>
-                        <div class="ml-3">
-                            <p class="font-semibold">${u.name}</p>
-                            <p class="text-sm text-gray-500">${u.email}</p>
-                        </div>
-                    </div>
+                    <strong>${u.name}</strong><br>
+                    <span class="text-sm text-gray-500">${u.email}</span>
                 </td>
-
                 <td class="px-4 py-3">${u.phone ?? "N/A"}</td>
-
-                <td class="px-4 py-3">
-                    <span class="px-2 py-1 text-xs rounded-full ${
-                        u.is_active ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-                    }">
-                        ${u.is_active ? "Active" : "Inactive"}
-                    </span>
-                </td>
-
                 <td class="px-4 py-3">${u.performance_score}%</td>
-
                 <td class="px-4 py-3">${u.last_sync ? new Date(u.last_sync).toLocaleString() : "Never"}</td>
-
                 <td class="px-4 py-3 text-right">
-                    <button onclick="adminDashboard.viewUserDetails(${u.id})" class="text-blue-600 mr-3">
+                    <button class="text-blue-600" onclick="adminDashboard.viewUser(${u.id})">
                         <i class="fas fa-eye"></i> View
                     </button>
                 </td>
@@ -186,9 +171,9 @@ class AdminDashboard {
             .join("");
     }
 
-    /* ============================================================
-       📌 RENDER ATTENDANCE TABLE
-    ============================================================ */
+    /* =========================================================================
+       ATTENDANCE TABLE
+    ========================================================================= */
     renderAttendanceTable() {
         const body = document.getElementById("attendance-table-body");
         if (!body) return;
@@ -198,21 +183,19 @@ class AdminDashboard {
                 (a) => `
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-2">${a.user_name}</td>
-                <td class="px-4 py-2">${new Date(a.check_in).toLocaleDateString()}</td>
-                <td class="px-4 py-2">${new Date(a.check_in).toLocaleTimeString()}</td>
-                <td class="px-4 py-2">${a.check_out ? new Date(a.check_out).toLocaleTimeString() : "--"}</td>
+                <td class="px-4 py-2">${new Date(a.check_in).toLocaleString()}</td>
+                <td class="px-4 py-2">${a.check_out ? new Date(a.check_out).toLocaleString() : "--"}</td>
                 <td class="px-4 py-2">${a.status}</td>
-                <td class="px-4 py-2">${a.address}</td>
             </tr>
         `
             )
             .join("");
     }
 
-    /* ============================================================
-       📌 VIEW USER FULL DATA (Calls, Analytics, Attendance)
-    ============================================================ */
-    async viewUserDetails(userId) {
+    /* =========================================================================
+       USER DETAILS MODAL (Analytics + Call History + Attendance)
+    ========================================================================= */
+    async viewUser(userId) {
         try {
             const [analytics, calls, attendance] = await Promise.all([
                 auth.makeAuthenticatedRequest(`/api/admin/user-analytics/${userId}`),
@@ -226,79 +209,71 @@ class AdminDashboard {
 
             const user = this.users.find((u) => u.id === userId);
 
-            this.showUserModal(user, analyticsData, callsData, attendanceData);
+            this.showModal(user, analyticsData, callsData, attendanceData);
         } catch (err) {
             console.error(err);
-            auth.showNotification("Failed to load user data", "error");
+            auth.showNotification("Failed to load user details", "error");
         }
     }
 
-    /* ============================================================
-       📌 USER DETAILS MODAL
-    ============================================================ */
-    showUserModal(user, analytics, calls, attendance) {
+    showModal(user, analytics, calls, attendance) {
         const modal = document.getElementById("user-data-modal");
         const box = document.getElementById("user-data-content");
 
         box.innerHTML = `
             <h2 class="text-xl font-bold">${user.name}</h2>
-            <p class="text-sm text-gray-500 mb-4">
-                Last Sync: ${user.last_sync ? new Date(user.last_sync).toLocaleString() : "Never"}
-            </p>
+            <p class="text-sm">Last Sync: ${user.last_sync ? new Date(user.last_sync).toLocaleString() : "Never"}</p>
 
-            <h3 class="font-semibold mt-4">Analytics</h3>
-            <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(analytics, null, 2)}</pre>
+            <h3 class="mt-4 font-semibold">Analytics</h3>
+            <pre>${JSON.stringify(analytics, null, 2)}</pre>
 
-            <h3 class="font-semibold mt-4">Call History</h3>
-            <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(calls, null, 2)}</pre>
+            <h3 class="mt-4 font-semibold">Call History</h3>
+            <pre>${JSON.stringify(calls, null, 2)}</pre>
 
-            <h3 class="font-semibold mt-4">Attendance</h3>
-            <pre class="bg-gray-100 p-3 rounded">${JSON.stringify(attendance, null, 2)}</pre>
+            <h3 class="mt-4 font-semibold">Attendance</h3>
+            <pre>${JSON.stringify(attendance, null, 2)}</pre>
         `;
 
         modal.classList.remove("hidden");
     }
 
-    setupModalClose() {
+    setupModalListeners() {
         const modal = document.getElementById("user-data-modal");
-        const close = document.getElementById("close-user-data-modal");
+        const closeBtn = document.getElementById("close-user-data-modal");
 
-        if (close) {
-            close.onclick = () => modal.classList.add("hidden");
-        }
+        closeBtn.onclick = () => modal.classList.add("hidden");
 
         modal.onclick = (e) => {
             if (e.target === modal) modal.classList.add("hidden");
         };
     }
 
-    /* ============================================================
-       📌 SIMPLE PAGE NAVIGATION
-    ============================================================ */
+    /* =========================================================================
+       NAVIGATION
+    ========================================================================= */
     showSection(section) {
         ["dashboard", "users", "attendance", "performance"].forEach((s) => {
             const div = document.getElementById(`${s}-section`);
             if (div) div.style.display = "none";
         });
 
-        const active = document.getElementById(`${section}-section`);
-        if (active) active.style.display = "block";
+        document.getElementById(`${section}-section`).style.display = "block";
     }
 
     setupNavigation() {
         document.querySelectorAll(".nav-item").forEach((item) => {
             item.onclick = (e) => {
                 e.preventDefault();
-                const t = item.getAttribute("href").replace("#", "");
-                this.showSection(t);
+                this.showSection(item.getAttribute("href").replace("#", ""));
             };
         });
     }
 
+    /* =========================================================================
+       LOGOUT
+    ========================================================================= */
     setupLogout() {
         const btn = document.getElementById("logout-btn");
-        if (!btn) return;
-
         btn.onclick = () => {
             sessionStorage.clear();
             window.location.href = "/admin/login.html";
@@ -306,4 +281,5 @@ class AdminDashboard {
     }
 }
 
+/* INIT */
 window.adminDashboard = new AdminDashboard();
