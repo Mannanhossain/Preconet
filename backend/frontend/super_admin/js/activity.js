@@ -1,152 +1,141 @@
+/************************************************************
+ * ACTIVITY LOG MANAGER – SUPER ADMIN
+ ************************************************************/
 class ActivityManager {
     constructor() {
         this.activities = [];
     }
 
-    // ---------------------------------------------------------
-    // LOAD LOGS (FIXED URL)
-    // ---------------------------------------------------------
+    /************************************************************
+     * LOAD ACTIVITY LOGS
+     ************************************************************/
     async loadActivity() {
         try {
-            // FIXED: remove ?per_page, backend doesn't support it
-            const response = await auth.makeAuthenticatedRequest('/api/superadmin/logs');
+            console.log("DEBUG: Fetching activity logs...");
+
+            const response = await auth.makeAuthenticatedRequest(
+                "/api/superadmin/logs"
+            );
+
             const data = await response.json();
+            console.log("DEBUG: Activity logs data:", data);
 
             if (response.ok) {
                 this.activities = data.logs || [];
-                this.renderActivity();
+                this.renderActivityTable();
             } else {
-                auth.showNotification(data.error || 'Failed to load activity logs', 'error');
+                auth.showNotification(data.error || "Failed to load activity logs", "error");
             }
-
         } catch (error) {
-            console.error('Error loading activity:', error);
-            auth.showNotification('Error loading activity logs', 'error');
+            console.error("ERROR Loading Activity Logs:", error);
+            auth.showNotification("Error loading activity logs", "error");
         }
     }
 
-    // ---------------------------------------------------------
-    // CLEAN ROLE FORMATTER
-    // ---------------------------------------------------------
-    formatRole(role) {
-        if (!role) return "Unknown";
-        return role
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (c) => c.toUpperCase());
-    }
-
-    // ---------------------------------------------------------
-    // ICON BASED ON ACTION
-    // ---------------------------------------------------------
-    getActionIcon(action = "") {
-        action = action.toLowerCase();
-
-        if (action.includes("created")) return "plus-circle";
-        if (action.includes("deleted")) return "trash";
-        if (action.includes("updated")) return "edit";
-        if (action.includes("login")) return "sign-in-alt";
-        if (action.includes("sync")) return "sync";
-        return "history";
-    }
-
-    // ---------------------------------------------------------
-    // SAFELY PARSE TIMESTAMP
-    // ---------------------------------------------------------
-    formatTimestamp(ts) {
+    /************************************************************
+     * FORMAT TIMESTAMP
+     ************************************************************/
+    formatTime(ts) {
         if (!ts) return "Unknown";
         const d = new Date(ts);
-        if (isNaN(d.getTime())) return "Unknown";
         return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
     }
 
-    // ---------------------------------------------------------
-    // RENDER RECENT ACTIVITY (TOP 5)
-    // ---------------------------------------------------------
-    renderActivity() {
-        const container = document.getElementById('recent-activity');
-        const tableBody = document.getElementById('activity-table-body');
+    /************************************************************
+     * CLEAN ROLE FORMAT
+     ************************************************************/
+    formatRole(role) {
+        if (!role) return "Unknown";
+        return role.replace(/_/g, " ").toUpperCase();
+    }
 
-        const recent = this.activities.slice(0, 5);
+    /************************************************************
+     * ICON BASED ON ACTION
+     ************************************************************/
+    getIcon(action = "") {
+        const a = action.toLowerCase();
+        if (a.includes("create")) return "plus-circle";
+        if (a.includes("delete")) return "trash";
+        if (a.includes("update")) return "edit";
+        if (a.includes("login")) return "sign-in-alt";
+        if (a.includes("logout")) return "sign-out-alt";
+        if (a.includes("sync")) return "sync";
+        return "history";
+    }
 
-        // ---------------- Recent Activity ----------------
-        if (container) {
-            if (recent.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-6 text-gray-500">
-                        <i class="fas fa-history text-3xl mb-2 text-gray-300"></i>
-                        <p>No activity yet</p>
-                    </div>
-                `;
-                return;
-            }
+    /************************************************************
+     * RENDER FULL ACTIVITY TABLE
+     ************************************************************/
+    renderActivityTable() {
+        const tbody = document.getElementById("activity-table-body");
+        if (!tbody) return;
 
-            container.innerHTML = recent.map(activity => `
-                <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition">
-
-                    <!-- Icon -->
-                    <div class="w-9 h-9 rounded-full flex items-center justify-center
-                        ${
-                            activity.actor_role === "super_admin" ? "bg-purple-100 text-purple-600" :
-                            activity.actor_role === "admin" ? "bg-blue-100 text-blue-600" :
-                            "bg-green-100 text-green-600"
-                        }">
-                        <i class="fas fa-${this.getActionIcon(activity.action)} text-sm"></i>
-                    </div>
-
-                    <!-- Details -->
-                    <div class="flex-1">
-                        <p class="text-sm text-gray-800">${activity.action || "Unknown Action"}</p>
-                        <p class="text-xs text-gray-500 mt-1">${this.formatTimestamp(activity.timestamp)}</p>
-                    </div>
-
-                </div>
-            `).join('');
+        if (this.activities.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="py-10 text-center text-gray-500">
+                        <i class="fas fa-history text-4xl mb-3 text-gray-300"></i>
+                        <p>No activity logs found</p>
+                    </td>
+                </tr>
+            `;
+            return;
         }
 
-        // ---------------- Full Table ----------------
-        if (tableBody) {
-            if (this.activities.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="text-center py-6 text-gray-500">
-                            <i class="fas fa-history text-3xl mb-2 text-gray-300"></i>
-                            <p>No logs found</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tableBody.innerHTML = this.activities.map(activity => `
+        tbody.innerHTML = this.activities
+            .map(log => `
                 <tr class="hover:bg-gray-50 transition">
 
-                    <td class="px-4 py-3">${activity.action}</td>
-
+                    <!-- ACTION -->
                     <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center
+                                ${
+                                    log.actor_role === "super_admin"
+                                        ? "bg-purple-100 text-purple-600"
+                                        : log.actor_role === "admin"
+                                        ? "bg-blue-100 text-blue-600"
+                                        : "bg-green-100 text-green-600"
+                                }">
+                                <i class="fas fa-${this.getIcon(log.action)}"></i>
+                            </div>
+                            <span class="text-sm text-gray-800">${log.action}</span>
+                        </div>
+                    </td>
+
+                    <!-- ACTOR -->
+                    <td class="px-4 py-3">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium
                             ${
-                                activity.actor_role === "super_admin" ? "bg-purple-100 text-purple-800" :
-                                activity.actor_role === "admin" ? "bg-blue-100 text-blue-800" :
-                                "bg-green-100 text-green-800"
+                                log.actor_role === "super_admin"
+                                    ? "bg-purple-100 text-purple-700"
+                                    : log.actor_role === "admin"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-green-100 text-green-700"
                             }">
-                            ${this.formatRole(activity.actor_role)}
+                            ${this.formatRole(log.actor_role)}
                         </span>
-                        <span class="text-xs text-gray-500 ml-2">
-                            ID: ${activity.actor_id}
-                        </span>
+                        <span class="text-xs text-gray-500 ml-2">ID: ${log.actor_id}</span>
                     </td>
 
+                    <!-- TARGET -->
                     <td class="px-4 py-3">
-                        <div class="text-sm">${this.formatRole(activity.target_type)}</div>
-                        <div class="text-xs text-gray-500">ID: ${activity.target_id || "N/A"}</div>
+                        <span class="text-sm text-gray-800">${log.target_type}</span>
+                        <p class="text-xs text-gray-500">ID: ${log.target_id ?? "N/A"}</p>
                     </td>
 
-                    <td class="px-4 py-3">${this.formatTimestamp(activity.timestamp)}</td>
+                    <!-- TIME -->
+                    <td class="px-4 py-3">
+                        <span class="text-sm">${this.formatTime(log.timestamp)}</span>
+                    </td>
 
                 </tr>
-            `).join('');
-        }
+            `)
+            .join("");
     }
 }
 
+/************************************************************
+ * INIT ACTIVITY MANAGER
+ ************************************************************/
 const activityManager = new ActivityManager();
