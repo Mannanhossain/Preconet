@@ -6,7 +6,7 @@ class AdminsManager {
 
     init() {
         this.setupCreateAdminForm();
-        this.loadAdmins(); 
+        this.loadAdmins();
     }
 
     // ---------------------------------------------------------
@@ -15,21 +15,21 @@ class AdminsManager {
     setupCreateAdminForm() {
         const form = document.getElementById('createAdminForm');
         if (form) {
-            form.addEventListener('submit', async (e) => {
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                await this.createAdmin();
+                this.createAdmin();
             });
         }
 
-        // Set expiry date defaults
+        // Default expiry date setup
         const expiryDate = document.getElementById('expiryDate');
         if (expiryDate) {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().split("T")[0];
             expiryDate.min = today;
 
-            const futureDate = new Date();
-            futureDate.setDate(futureDate.getDate() + 30);
-            expiryDate.value = futureDate.toISOString().split('T')[0];
+            const future = new Date();
+            future.setDate(future.getDate() + 30);
+            expiryDate.value = future.toISOString().split("T")[0];
         }
     }
 
@@ -38,43 +38,47 @@ class AdminsManager {
     // ---------------------------------------------------------
     async createAdmin() {
         const formData = {
-            name: document.getElementById('adminName').value.trim(),
-            email: document.getElementById('adminEmail').value.trim(),
-            password: document.getElementById('adminPassword').value.trim(),
-            user_limit: Number(document.getElementById('userLimit').value) || 10,
-            expiry_date: document.getElementById('expiryDate').value
+            name: document.getElementById("adminName").value.trim(),
+            email: document.getElementById("adminEmail").value.trim(),
+            password: document.getElementById("adminPassword").value.trim(),
+            user_limit: Number(document.getElementById("userLimit").value) || 10,
+            expiry_date: document.getElementById("expiryDate").value
         };
 
         if (!formData.name || !formData.email || !formData.password || !formData.expiry_date) {
-            auth.showNotification('Please fill all fields', 'error');
+            auth.showNotification("Please fill all fields", "error");
             return;
         }
 
         try {
-            const response = await auth.makeAuthenticatedRequest('/api/superadmin/create-admin', {
-                method: 'POST',
-                body: JSON.stringify(formData)
-            });
+            const response = await auth.makeAuthenticatedRequest(
+                "/api/superadmin/create-admin",
+                {
+                    method: "POST",
+                    body: JSON.stringify(formData)
+                }
+            );
 
             const data = await response.json();
 
             if (response.ok) {
-                auth.showNotification('Admin created successfully!', 'success');
-                document.getElementById('createAdminForm').reset();
+                auth.showNotification("Admin created successfully!", "success");
+                document.getElementById("createAdminForm").reset();
 
-                // Reset expiry
-                const expiryDate = document.getElementById('expiryDate');
-                const futureDate = new Date();
-                futureDate.setDate(futureDate.getDate() + 30);
-                expiryDate.value = futureDate.toISOString().split('T')[0];
+                // Reset expiry date again
+                const expiryDate = document.getElementById("expiryDate");
+                const next = new Date();
+                next.setDate(next.getDate() + 30);
+                expiryDate.value = next.toISOString().split("T")[0];
 
                 this.loadAdmins();
             } else {
-                auth.showNotification(data.error || 'Failed to create admin', 'error');
+                auth.showNotification(data.error || "Failed to create admin", "error");
             }
-        } catch (error) {
-            console.error('Error creating admin:', error);
-            auth.showNotification('Error creating admin', 'error');
+
+        } catch (err) {
+            console.error("Error creating admin:", err);
+            auth.showNotification("Error creating admin", "error");
         }
     }
 
@@ -83,19 +87,19 @@ class AdminsManager {
     // ---------------------------------------------------------
     async loadAdmins() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/api/superadmin/admins');
+            const response = await auth.makeAuthenticatedRequest("/api/superadmin/admins");
             const data = await response.json();
 
             if (response.ok) {
                 this.admins = data.admins || [];
                 this.renderAdmins();
             } else {
-                auth.showNotification(data.error || 'Failed to load admins', 'error');
+                auth.showNotification(data.error || "Failed to load admins", "error");
             }
 
-        } catch (error) {
-            console.error('Error loading admins:', error);
-            auth.showNotification('Error loading admins list', 'error');
+        } catch (err) {
+            console.error("Error loading admins:", err);
+            auth.showNotification("Error loading admins list", "error");
         }
     }
 
@@ -103,7 +107,7 @@ class AdminsManager {
     // RENDER ADMIN TABLE
     // ---------------------------------------------------------
     renderAdmins() {
-        const tableBody = document.getElementById('admins-table-body');
+        const tableBody = document.getElementById("admins-table-body");
         if (!tableBody) return;
 
         if (this.admins.length === 0) {
@@ -120,11 +124,18 @@ class AdminsManager {
 
         tableBody.innerHTML = this.admins.map(admin => {
 
-            const safeDate = admin.expiry_date ? new Date(admin.expiry_date) : null;
-            const expiryStr = safeDate && !isNaN(safeDate) ? safeDate.toLocaleDateString() : "N/A";
+            const expireDate = admin.expiry_date ? new Date(admin.expiry_date) : null;
+            const expiryStr = expireDate && !isNaN(expireDate) ? expireDate.toLocaleDateString() : "N/A";
+
+            const statusBadge = !admin.is_active
+                ? `<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium"><i class="fas fa-circle mr-1 text-xs"></i>Inactive</span>`
+                : admin.is_expired
+                ? `<span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium"><i class="fas fa-circle mr-1 text-xs"></i>Expired</span>`
+                : `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium"><i class="fas fa-circle mr-1 text-xs"></i>Active</span>`;
 
             return `
                 <tr class="hover:bg-gray-50 transition">
+
                     <td class="px-4 py-4">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -138,32 +149,22 @@ class AdminsManager {
                     </td>
 
                     <td class="px-4 py-4">
-                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
                             ${admin.user_count}/${admin.user_limit} users
                         </span>
                     </td>
 
                     <td class="px-4 py-4">
                         <div class="flex items-center space-x-2">
-                            <i class="fas fa-calendar ${admin.is_expired ? 'text-red-500' : 'text-green-500'}"></i>
-                            <span class="${admin.is_expired ? 'text-red-600' : 'text-gray-600'}">
-                                ${expiryStr}
-                            </span>
+                            <i class="fas fa-calendar ${
+                                admin.is_expired ? 'text-red-500' : 'text-green-500'
+                            }"></i>
+                            <span>${expiryStr}</span>
                         </div>
                     </td>
 
                     <td class="px-4 py-4">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                            !admin.is_active ? 'bg-red-100 text-red-800' :
-                            admin.is_expired ? 'bg-orange-100 text-orange-800' :
-                            'bg-green-100 text-green-800'
-                        }">
-                            <i class="fas fa-circle mr-1 text-xs"></i>
-                            ${
-                                !admin.is_active ? 'Inactive' :
-                                admin.is_expired ? 'Expired' : 'Active'
-                            }
-                        </span>
+                        ${statusBadge}
                     </td>
 
                     <td class="px-4 py-4">
@@ -179,42 +180,24 @@ class AdminsManager {
                             </button>
                         </div>
                     </td>
+
                 </tr>
             `;
         }).join('');
     }
 
     // ---------------------------------------------------------
-    // EDIT ADMIN (COMING SOON)
+    // EDIT COMING SOON
     // ---------------------------------------------------------
-    async editAdmin() {
-        auth.showNotification('Edit feature coming soon!', 'info');
+    editAdmin(id) {
+        auth.showNotification("Edit feature coming soon!", "info");
     }
 
     // ---------------------------------------------------------
-    // DELETE ADMIN
+    // DELETE ADMIN (function disabled because backend missing)
     // ---------------------------------------------------------
-    async deleteAdmin(adminId) {
-        if (!confirm('Are you sure you want to delete this admin?')) return;
-
-        try {
-            const response = await auth.makeAuthenticatedRequest(`/api/superadmin/delete-admin/${adminId}`, {
-                method: 'DELETE'
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                auth.showNotification('Admin deleted successfully!', 'success');
-                this.loadAdmins();
-            } else {
-                auth.showNotification(data.error || 'Failed to delete admin', 'error');
-            }
-
-        } catch (error) {
-            console.error('Error deleting admin:', error);
-            auth.showNotification('Error deleting admin', 'error');
-        }
+    deleteAdmin(id) {
+        auth.showNotification("Delete admin API not implemented in backend", "error");
     }
 }
 

@@ -1,31 +1,26 @@
 let currentLogPage = 1;
-const logsPerPage = 10;
+const logsPerPage = 20;
 
 document.addEventListener("DOMContentLoaded", () => {
-    const logFilter = document.getElementById("logFilter");
-
-    if (logFilter) {
-        logFilter.addEventListener("change", () => loadLogs(1)); // reset to page 1
-    }
-
     const logsMenuButton = document.querySelector('[data-target="logs-view"]');
     if (logsMenuButton) {
-        logsMenuButton.addEventListener("click", () => loadLogs(1));
+        logsMenuButton.addEventListener("click", () => loadLogs());
+    }
+
+    const logFilter = document.getElementById("logFilter");
+    if (logFilter) {
+        logFilter.addEventListener("change", () => loadLogs());
     }
 });
 
 /* -------------------------------------------------------
-    LOAD LOGS
+    LOAD LOGS  (BACKEND HAS NO PAGINATION)
 ------------------------------------------------------- */
-async function loadLogs(page = 1) {
+async function loadLogs() {
     try {
-        currentLogPage = page;
+        let url = `/api/superadmin/logs`;
 
-        const filter = document.getElementById("logFilter")?.value || "";
-
-        // FIXED URL (Auth adds /api prefix automatically)
-        let url = `/super-admin/logs?page=${page}&per_page=${logsPerPage}`;
-        if (filter) url += `&actor_role=${filter}`;
+        const filterRole = document.getElementById("logFilter")?.value || "";
 
         const response = await auth.makeAuthenticatedRequest(url);
         const data = await response.json();
@@ -35,11 +30,17 @@ async function loadLogs(page = 1) {
             return;
         }
 
-        displayLogs(data.logs);
-        setupPagination(data.total, data.pages, page);
+        let logs = data.logs || [];
 
-    } catch (error) {
-        console.error("Error loading logs:", error);
+        // Manual filter on frontend — because backend has no filter support
+        if (filterRole) {
+            logs = logs.filter(l => l.actor_role === filterRole);
+        }
+
+        displayLogs(logs);
+
+    } catch (e) {
+        console.error("Error loading logs:", e);
         auth.showNotification("Failed to load activity logs", "error");
     }
 }
@@ -55,7 +56,7 @@ function displayLogs(logs) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="5" class="py-10 text-center text-gray-500">
-                    <i class="fas fa-history text-4xl mb-3 text-gray-300"></i>
+                    <i class="fas fa-history text-4xl text-gray-300 mb-3"></i>
                     <p>No activity logs found</p>
                 </td>
             </tr>
@@ -63,77 +64,32 @@ function displayLogs(logs) {
         return;
     }
 
-    tbody.innerHTML = logs
-        .map(
-            (log) => `
+    tbody.innerHTML = logs.map(log => `
         <tr class="hover:bg-gray-50 transition">
+
             <td>${new Date(log.timestamp).toLocaleString()}</td>
 
             <td>
-                <span class="px-3 py-1 rounded-full text-xs font-medium ${
-                    log.actor_role === "super_admin"
+                <span class="px-3 py-1 rounded-full text-xs font-medium 
+                    ${
+                        log.actor_role === "super_admin"
                         ? "bg-purple-100 text-purple-700"
                         : log.actor_role === "admin"
                         ? "bg-blue-100 text-blue-700"
                         : "bg-green-100 text-green-700"
-                }">
+                    }">
                     ${log.actor_role.replace("_", " ").toUpperCase()}
                 </span>
             </td>
 
             <td>${log.action}</td>
-            <td>${log.target_type}</td>
+            <td>${log.target_type || "N/A"}</td>
             <td>${log.target_id || "N/A"}</td>
+
         </tr>
-    `
-        )
-        .join("");
+    `).join("");
 }
 
 /* -------------------------------------------------------
-    PAGINATION
+    PAGINATION REMOVED (Backend does not support it)
 ------------------------------------------------------- */
-function setupPagination(total, pages, currentPage) {
-    const pagination = document.getElementById("logsPagination");
-    if (!pagination) return;
-
-    if (pages <= 1) {
-        pagination.innerHTML = "";
-        return;
-    }
-
-    let html = "";
-
-    // Previous button
-    if (currentPage > 1) {
-        html += `<button onclick="loadLogs(${currentPage - 1})">
-                    <i class="fas fa-chevron-left"></i>
-                 </button>`;
-    }
-
-    // Show limited page numbers (smart pagination)
-    const maxButtons = 7;
-    let start = Math.max(1, currentPage - 3);
-    let end = Math.min(pages, start + maxButtons - 1);
-
-    if (end - start < maxButtons - 1) {
-        start = Math.max(1, end - (maxButtons - 1));
-    }
-
-    for (let i = start; i <= end; i++) {
-        if (i === currentPage) {
-            html += `<button class="active">${i}</button>`;
-        } else {
-            html += `<button onclick="loadLogs(${i})">${i}</button>`;
-        }
-    }
-
-    // Next button
-    if (currentPage < pages) {
-        html += `<button onclick="loadLogs(${currentPage + 1})">
-                    <i class="fas fa-chevron-right"></i>
-                 </button>`;
-    }
-
-    pagination.innerHTML = html;
-}

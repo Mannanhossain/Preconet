@@ -4,11 +4,12 @@ class ActivityManager {
     }
 
     // ---------------------------------------------------------
-    // LOAD LOGS
+    // LOAD LOGS (FIXED URL)
     // ---------------------------------------------------------
     async loadActivity() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/api/superadmin/logs?per_page=50');
+            // FIXED: remove ?per_page, backend doesn't support it
+            const response = await auth.makeAuthenticatedRequest('/api/superadmin/logs');
             const data = await response.json();
 
             if (response.ok) {
@@ -119,9 +120,7 @@ class ActivityManager {
             tableBody.innerHTML = this.activities.map(activity => `
                 <tr class="hover:bg-gray-50 transition">
 
-                    <td class="px-4 py-3">
-                        <span class="text-sm text-gray-800">${activity.action}</span>
-                    </td>
+                    <td class="px-4 py-3">${activity.action}</td>
 
                     <td class="px-4 py-3">
                         <span class="px-2 py-1 rounded-full text-xs font-medium
@@ -132,17 +131,17 @@ class ActivityManager {
                             }">
                             ${this.formatRole(activity.actor_role)}
                         </span>
-                        <span class="text-xs text-gray-500 ml-2">ID: ${activity.actor_id}</span>
+                        <span class="text-xs text-gray-500 ml-2">
+                            ID: ${activity.actor_id}
+                        </span>
                     </td>
 
                     <td class="px-4 py-3">
-                        <div class="text-sm text-gray-800">${this.formatRole(activity.target_type)}</div>
+                        <div class="text-sm">${this.formatRole(activity.target_type)}</div>
                         <div class="text-xs text-gray-500">ID: ${activity.target_id || "N/A"}</div>
                     </td>
 
-                    <td class="px-4 py-3">
-                        <div class="text-sm">${this.formatTimestamp(activity.timestamp)}</div>
-                    </td>
+                    <td class="px-4 py-3">${this.formatTimestamp(activity.timestamp)}</td>
 
                 </tr>
             `).join('');
