@@ -6,12 +6,12 @@ class AdminsManager {
 
     init() {
         this.setupCreateAdminForm();
-        this.loadAdmins();   // ✅ Auto-load admins on page load
+        this.loadAdmins(); 
     }
 
-    // ---------------------------------------------
-    // CREATE ADMIN FORM SETUP
-    // ---------------------------------------------
+    // ---------------------------------------------------------
+    // SETUP CREATE ADMIN FORM
+    // ---------------------------------------------------------
     setupCreateAdminForm() {
         const form = document.getElementById('createAdminForm');
         if (form) {
@@ -21,22 +21,21 @@ class AdminsManager {
             });
         }
 
-        // Set minimum expiry date
+        // Set expiry date defaults
         const expiryDate = document.getElementById('expiryDate');
         if (expiryDate) {
             const today = new Date().toISOString().split('T')[0];
             expiryDate.min = today;
 
-            // Default +30 days
             const futureDate = new Date();
             futureDate.setDate(futureDate.getDate() + 30);
             expiryDate.value = futureDate.toISOString().split('T')[0];
         }
     }
 
-    // ---------------------------------------------
+    // ---------------------------------------------------------
     // CREATE ADMIN
-    // ---------------------------------------------
+    // ---------------------------------------------------------
     async createAdmin() {
         const formData = {
             name: document.getElementById('adminName').value.trim(),
@@ -52,7 +51,7 @@ class AdminsManager {
         }
 
         try {
-            const response = await auth.makeAuthenticatedRequest('/superadmin/create-admin', {
+            const response = await auth.makeAuthenticatedRequest('/api/superadmin/create-admin', {
                 method: 'POST',
                 body: JSON.stringify(formData)
             });
@@ -61,10 +60,9 @@ class AdminsManager {
 
             if (response.ok) {
                 auth.showNotification('Admin created successfully!', 'success');
-
                 document.getElementById('createAdminForm').reset();
-                
-                // Reset expiry date
+
+                // Reset expiry
                 const expiryDate = document.getElementById('expiryDate');
                 const futureDate = new Date();
                 futureDate.setDate(futureDate.getDate() + 30);
@@ -76,33 +74,34 @@ class AdminsManager {
             }
         } catch (error) {
             console.error('Error creating admin:', error);
-            auth.showNotification('Error creating admin account', 'error');
+            auth.showNotification('Error creating admin', 'error');
         }
     }
 
-    // ---------------------------------------------
-    // LOAD ADMIN LIST
-    // ---------------------------------------------
+    // ---------------------------------------------------------
+    // LOAD ADMINS LIST
+    // ---------------------------------------------------------
     async loadAdmins() {
         try {
-            const response = await auth.makeAuthenticatedRequest('/superadmin/admins');
+            const response = await auth.makeAuthenticatedRequest('/api/superadmin/admins');
             const data = await response.json();
 
             if (response.ok) {
                 this.admins = data.admins || [];
                 this.renderAdmins();
             } else {
-                auth.showNotification('Failed to load admins', 'error');
+                auth.showNotification(data.error || 'Failed to load admins', 'error');
             }
+
         } catch (error) {
             console.error('Error loading admins:', error);
             auth.showNotification('Error loading admins list', 'error');
         }
     }
 
-    // ---------------------------------------------
+    // ---------------------------------------------------------
     // RENDER ADMIN TABLE
-    // ---------------------------------------------
+    // ---------------------------------------------------------
     renderAdmins() {
         const tableBody = document.getElementById('admins-table-body');
         if (!tableBody) return;
@@ -119,81 +118,87 @@ class AdminsManager {
             return;
         }
 
-        tableBody.innerHTML = this.admins.map(admin => `
-            <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-4 py-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-user-cog text-blue-600"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium text-gray-900">${admin.name}</p>
-                            <p class="text-sm text-gray-500">${admin.email}</p>
-                        </div>
-                    </div>
-                </td>
+        tableBody.innerHTML = this.admins.map(admin => {
 
-                <td class="px-4 py-4">
-                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                        ${admin.user_count}/${admin.user_limit} users
-                    </span>
-                </td>
+            const safeDate = admin.expiry_date ? new Date(admin.expiry_date) : null;
+            const expiryStr = safeDate && !isNaN(safeDate) ? safeDate.toLocaleDateString() : "N/A";
 
-                <td class="px-4 py-4">
-                    <div class="flex items-center space-x-2">
-                        <i class="fas fa-calendar ${admin.is_expired ? 'text-red-500' : 'text-green-500'}"></i>
-                        <span class="${admin.is_expired ? 'text-red-600' : 'text-gray-600'}">
-                            ${new Date(admin.expiry_date).toLocaleDateString()}
+            return `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-4 py-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user-cog text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">${admin.name}</p>
+                                <p class="text-sm text-gray-500">${admin.email}</p>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="px-4 py-4">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                            ${admin.user_count}/${admin.user_limit} users
                         </span>
-                    </div>
-                </td>
+                    </td>
 
-                <td class="px-4 py-4">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                        !admin.is_active ? 'bg-red-100 text-red-800' :
-                        admin.is_expired ? 'bg-orange-100 text-orange-800' :
-                        'bg-green-100 text-green-800'
-                    }">
-                        <i class="fas fa-circle mr-1 text-xs"></i>
-                        ${
-                            !admin.is_active ? 'Inactive' :
-                            admin.is_expired ? 'Expired' : 'Active'
-                        }
-                    </span>
-                </td>
+                    <td class="px-4 py-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-calendar ${admin.is_expired ? 'text-red-500' : 'text-green-500'}"></i>
+                            <span class="${admin.is_expired ? 'text-red-600' : 'text-gray-600'}">
+                                ${expiryStr}
+                            </span>
+                        </div>
+                    </td>
 
-                <td class="px-4 py-4">
-                    <div class="flex items-center space-x-2">
-                        <button class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            onclick="adminsManager.editAdmin(${admin.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                    <td class="px-4 py-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                            !admin.is_active ? 'bg-red-100 text-red-800' :
+                            admin.is_expired ? 'bg-orange-100 text-orange-800' :
+                            'bg-green-100 text-green-800'
+                        }">
+                            <i class="fas fa-circle mr-1 text-xs"></i>
+                            ${
+                                !admin.is_active ? 'Inactive' :
+                                admin.is_expired ? 'Expired' : 'Active'
+                            }
+                        </span>
+                    </td>
 
-                        <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            onclick="adminsManager.deleteAdmin(${admin.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+                    <td class="px-4 py-4">
+                        <div class="flex items-center space-x-2">
+                            <button class="p-2 text-blue-600 hover:bg-blue-50"
+                                onclick="adminsManager.editAdmin(${admin.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+
+                            <button class="p-2 text-red-600 hover:bg-red-50"
+                                onclick="adminsManager.deleteAdmin(${admin.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
-    // ---------------------------------------------
-    // PLACEHOLDER: EDIT ADMIN
-    // ---------------------------------------------
-    async editAdmin(adminId) {
+    // ---------------------------------------------------------
+    // EDIT ADMIN (COMING SOON)
+    // ---------------------------------------------------------
+    async editAdmin() {
         auth.showNotification('Edit feature coming soon!', 'info');
     }
 
-    // ---------------------------------------------
+    // ---------------------------------------------------------
     // DELETE ADMIN
-    // ---------------------------------------------
+    // ---------------------------------------------------------
     async deleteAdmin(adminId) {
         if (!confirm('Are you sure you want to delete this admin?')) return;
 
         try {
-            const response = await auth.makeAuthenticatedRequest(`/superadmin/delete-admin/${adminId}`, {
+            const response = await auth.makeAuthenticatedRequest(`/api/superadmin/delete-admin/${adminId}`, {
                 method: 'DELETE'
             });
 
@@ -205,6 +210,7 @@ class AdminsManager {
             } else {
                 auth.showNotification(data.error || 'Failed to delete admin', 'error');
             }
+
         } catch (error) {
             console.error('Error deleting admin:', error);
             auth.showNotification('Error deleting admin', 'error');
