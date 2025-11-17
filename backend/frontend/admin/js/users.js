@@ -1,205 +1,96 @@
-/* ============================================================
-    USERS MANAGER – Call Manager Pro (Admin Panel)
-============================================================ */
-
+/* users manager (admin) */
 class UsersManager {
-    constructor() {
-        this.users = [];
-        window.usersManager = this;
-    }
+  constructor() {
+    this.users = [];
+    this.bindCreate();
+  }
 
-    /* ============================================================
-       LOAD ALL USERS
-    ============================================================ */
-    async loadUsers() {
-        try {
-            const resp = await auth.makeAuthenticatedRequest("/api/admin/users");
-            const data = await resp.json();
-
-            if (!resp.ok) {
-                auth.showNotification(data.error || "Failed to load users", "error");
-                return;
-            }
-
-            this.users = data.users;
-            this.renderUsers();
-        } catch (err) {
-            console.error("Users load error:", err);
-            auth.showNotification("Error loading users", "error");
-        }
-    }
-
-    /* ============================================================
-       RENDER USERS TABLE
-    ============================================================ */
-    renderUsers() {
-        const body = document.getElementById("users-table-body");
-        if (!body) return;
-
-        if (this.users.length === 0) {
-            body.innerHTML = `
-                <tr><td colspan="5" class="text-center py-6 text-gray-400">
-                    No users found
-                </td></tr>`;
-            return;
-        }
-
-        body.innerHTML = this.users
-            .map(
-                (u) => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3">
-                    <div class="flex items-center">
-                        <div class="h-10 w-10 bg-blue-600 text-white rounded-full flex items-center justify-center">
-                            ${u.name[0].toUpperCase()}
-                        </div>
-                        <div class="ml-3">
-                            <p class="font-semibold">${u.name}</p>
-                            <p class="text-sm text-gray-500">${u.email}</p>
-                        </div>
-                    </div>
-                </td>
-
-                <td class="px-4 py-3">${u.phone || "N/A"}</td>
-
-                <td class="px-4 py-3">${u.performance_score}%</td>
-
-                <td class="px-4 py-3">
-                    <span class="px-2 py-1 text-xs rounded-full ${
-                        u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                    }">
-                        ${u.is_active ? "Active" : "Inactive"}
-                    </span>
-                </td>
-
-                <td class="px-4 py-3 text-right">
-                    <button onclick="usersManager.viewUserData(${u.id})"
-                        class="text-blue-600 mr-3">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </td>
-            </tr>
-        `
-            )
-            .join("");
-    }
-
-    /* ============================================================
-       VIEW USER FULL DATA (FIXED)
-    ============================================================ */
-    async viewUserData(userId) {
-        try {
-            const user = this.users.find((u) => u.id === userId);
-
-            const [attResp, callResp, analyticsResp] = await Promise.all([
-                auth.makeAuthenticatedRequest(`/api/admin/user-attendance/${userId}`),
-                auth.makeAuthenticatedRequest(`/api/admin/user-call-history/${userId}`),
-                auth.makeAuthenticatedRequest(`/api/admin/user-analytics/${userId}`)
-            ]);
-
-            const attendance = await attResp.json();
-            const callHistory = await callResp.json();
-            const analytics = await analyticsResp.json();
-
-            this.renderUserModal(user, {
-                attendance: attendance.attendance || [],
-                call_history: callHistory.call_history || [],
-                analytics: analytics.analytics || {},
-                last_sync: user.last_sync
-            });
-
-        } catch (err) {
-            console.error("User data error:", err);
-            auth.showNotification("Error loading user details", "error");
-        }
-    }
-
-    /* ============================================================
-       RENDER USER MODAL
-    ============================================================ */
-    renderUserModal(user, data) {
-        const modal = document.getElementById("user-data-modal");
-        const content = document.getElementById("user-data-content");
-
-        content.innerHTML = `
-            <h2 class="text-xl font-bold">${user.name}</h2>
-            <p class="text-sm text-gray-500 mb-4">Last Sync: 
-                ${data.last_sync ? new Date(data.last_sync).toLocaleString() : "Never"}
-            </p>
-
-            <div class="space-y-6">
-
-                <div>
-                    <h3 class="font-semibold mb-2">Analytics</h3>
-                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(data.analytics, null, 2)}</pre>
-                </div>
-
-                <div>
-                    <h3 class="font-semibold mb-2">Call History (${data.call_history.length})</h3>
-                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(data.call_history, null, 2)}</pre>
-                </div>
-
-                <div>
-                    <h3 class="font-semibold mb-2">Attendance Records (${data.attendance.length})</h3>
-                    <pre class="bg-gray-100 p-3 rounded text-sm">${JSON.stringify(data.attendance, null, 2)}</pre>
-                </div>
-            </div>
-        `;
-
-        modal.classList.remove("hidden");
-    }
-
-    closeUserDataModal() {
-        const modal = document.getElementById("user-data-modal");
-        modal.classList.add("hidden");
-    }
-
-    /* ============================================================
-       CREATE USER
-    ============================================================ */
-    async handleCreateUser() {
-        const form = document.getElementById("createUserForm");
-        if (!form) return;
-
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const payload = {
-                name: document.getElementById("userName").value.trim(),
-                email: document.getElementById("userEmail").value.trim(),
-                phone: document.getElementById("userPhone").value.trim(),
-                password: document.getElementById("userPassword").value.trim(),
-            };
-
-            try {
-                const resp = await auth.makeAuthenticatedRequest(
-                    "/api/admin/create-user",
-                    {
-                        method: "POST",
-                        body: JSON.stringify(payload)
-                    }
-                );
-
-                const res = await resp.json();
-
-                if (resp.ok) {
-                    auth.showNotification("User created successfully!", "success");
-                    form.reset();
-                    this.loadUsers();
-                } else {
-                    auth.showNotification(res.error || "Failed to create user", "error");
-                }
-
-            } catch (err) {
-                console.error("Create user error:", err);
-                auth.showNotification("Error creating user", "error");
-            }
+  async bindCreate() {
+    const form = document.getElementById('createUserForm');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('userName').value.trim(),
+        email: document.getElementById('userEmail').value.trim(),
+        phone: document.getElementById('userPhone').value.trim(),
+        password: document.getElementById('userPassword').value.trim()
+      };
+      try {
+        const resp = await auth.makeAuthenticatedRequest('/api/admin/create-user', {
+          method: 'POST', body: JSON.stringify(payload)
         });
+        const data = await resp.json();
+        if (resp.ok) {
+          auth.showNotification('User created', 'success');
+          form.reset();
+          this.loadUsers();
+        } else {
+          auth.showNotification(data.error || 'Create failed', 'error');
+        }
+      } catch (e) { console.error(e); auth.showNotification('Create error', 'error'); }
+    });
+  }
+
+  async loadUsers() {
+    try {
+      const resp = await auth.makeAuthenticatedRequest('/api/admin/users');
+      const data = await resp.json();
+      if (!resp.ok) { auth.showNotification(data.error || 'Load users failed', 'error'); return; }
+      this.users = data.users || [];
+      this.render();
+    } catch (e) { console.error(e); auth.showNotification('Load error', 'error'); }
+  }
+
+  render() {
+    const body = document.getElementById('usersTableBody');
+    if (!body) return;
+    if (!this.users.length) {
+      body.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-500">No users</td></tr>`;
+      return;
     }
+    body.innerHTML = this.users.map(u => `
+      <tr>
+        <td class="p-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded bg-blue-600 text-white flex items-center justify-center">${(u.name||'')[0]||'U'}</div>
+            <div>
+              <div class="font-medium">${u.name}</div>
+              <div class="text-xs text-gray-500">${u.email}</div>
+            </div>
+          </div>
+        </td>
+        <td class="p-3">${u.phone||'N/A'}</td>
+        <td class="p-3">${u.performance_score ?? 0}%</td>
+        <td class="p-3"><span class="${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} px-2 py-1 rounded text-xs">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td class="p-3 text-right">
+          <button onclick="usersManager.view(${u.id})" class="text-blue-600 mr-2"><i class="fas fa-eye"></i></button>
+          <button onclick="usersManager.delete(${u.id})" class="text-red-600"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async view(id) {
+    try {
+      const resp = await auth.makeAuthenticatedRequest(`/api/admin/user-data/${id}`);
+      const data = await resp.json();
+      if (!resp.ok) { auth.showNotification(data.error || 'Load failed', 'error'); return; }
+      document.getElementById('modalUserTitle').innerText = data.user?.name || 'User Data';
+      document.getElementById('modalUserBody').innerHTML = `<pre class="text-xs bg-gray-50 p-3 rounded">${JSON.stringify(data, null,2)}</pre>`;
+      document.getElementById('userDataModal').classList.remove('hidden');
+    } catch(e){ console.error(e); auth.showNotification('User data error','error'); }
+  }
+
+  async delete(id) {
+    if (!confirm('Delete user?')) return;
+    try {
+      const resp = await auth.makeAuthenticatedRequest(`/api/admin/delete-user/${id}`, { method: 'DELETE' });
+      const data = await resp.json();
+      if (resp.ok) { auth.showNotification('Deleted','success'); this.loadUsers(); }
+      else auth.showNotification(data.error || 'Delete failed','error');
+    } catch(e){ console.error(e); auth.showNotification('Delete error','error'); }
+  }
 }
 
-/* INIT */
-document.addEventListener("DOMContentLoaded", () => {
-    window.usersManager = new UsersManager();
-    usersManager.handleCreateUser();
-});
+const usersManager = new UsersManager();
