@@ -39,49 +39,41 @@ def create_app(config_class=Config):
     app.register_blueprint(fix_bp)
 
     # ------------------------------------------
-    # DATABASE INITIALIZATION (SAFE FOR RENDER)
+    # FIXED FRONTEND PATH (IMPORTANT!!)
     # ------------------------------------------
-    with app.app_context():
-        inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
-
-        # First-run database initialization
-        if not tables:
-            print("⚙️ No tables detected → Creating database...")
-            db.create_all()
-            print("✅ Database tables created")
-
-        # Default SuperAdmin (only if missing)
-        if not SuperAdmin.query.first():
-            print("⚙️ Creating default Super Admin account...")
-            super_admin = SuperAdmin(
-                name="Super Admin",
-                email="super@callmanager.com"
-            )
-            super_admin.set_password("admin123")
-            db.session.add(super_admin)
-            db.session.commit()
-            print("✅ Default Super Admin ready (super@callmanager.com / admin123)")
+    # Your project structure:
+    # backend/
+    #   app/
+    #   frontend/
+    #       super_admin/
+    #
+    # So the correct full path is:
+    # ROOT/backend/frontend
+    #
+    FRONTEND_PATH = os.path.join(os.getcwd(), "backend", "frontend")
+    print("🔥 FRONTEND PATH:", FRONTEND_PATH)
 
     # ------------------------------------------
-    # FRONTEND STATIC PATH
+    # SUPER ADMIN UI ROUTES (WORKING)
     # ------------------------------------------
-    FRONTEND_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+    @app.route("/super_admin")
+    def super_admin_home():
+        # default page → login.html
+        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
+
+    @app.route("/super_admin/<path:filename>")
+    def super_admin_static(filename):
+        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
 
     # ------------------------------------------
-    # ROOT ENDPOINT
+    # API HOME
     # ------------------------------------------
     @app.route("/")
     def home():
         return jsonify({
-            "status": "running",
             "message": "Call Manager Pro Backend is LIVE!",
-            "routes": {
-                "health": "/api/health",
-                "super_admin_login": "/api/superadmin/login",
-                "admin_login": "/api/admin/login",
-                "user_login": "/api/users/login"
-            }
+            "super_admin_ui": "/super_admin/login.html",
+            "status": "running"
         })
 
     # ------------------------------------------
@@ -96,33 +88,27 @@ def create_app(config_class=Config):
         }), 200
 
     # ------------------------------------------
-    # SUPER ADMIN DASHBOARD
+    # FIRST TIME SETUP (CREATE DEFAULT SUPER ADMIN)
     # ------------------------------------------
-    @app.route("/super_admin")
-    def super_admin_dashboard():
-        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "index.html")
+    with app.app_context():
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
 
-    @app.route("/super_admin/<path:filename>")
-    def super_admin_static(filename):
-        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
+        if not tables:
+            print("⚙️ Creating database tables...")
+            db.create_all()
+            print("✅ Tables created.")
 
-    @app.route("/super_admin/login.html")
-    def super_admin_login_page():
-        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
-
-    # ------------------------------------------
-    # ADMIN DASHBOARD
-    # ------------------------------------------
-    @app.route("/admin")
-    def admin_dashboard():
-        return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "index.html")
-
-    @app.route("/admin/<path:filename>")
-    def admin_static(filename):
-        return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), filename)
-
-    @app.route("/admin/login.html")
-    def admin_login_page():
-        return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
+        # Create default SuperAdmin if missing
+        if not SuperAdmin.query.first():
+            print("⚙️ Creating default Super Admin...")
+            super_admin = SuperAdmin(
+                name="Super Admin",
+                email="super@callmanager.com"
+            )
+            super_admin.set_password("admin123")
+            db.session.add(super_admin)
+            db.session.commit()
+            print("✅ Default Super Admin ready: super@callmanager.com / admin123")
 
     return app
