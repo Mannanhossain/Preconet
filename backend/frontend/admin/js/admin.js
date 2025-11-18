@@ -1,10 +1,13 @@
-// ========== AUTH CHECK ==========
-const token = sessionStorage.getItem("admin_token");
-if (!token) {
+// =========================
+// AUTH CHECK
+// =========================
+if (!auth.getToken()) {
     window.location.href = "/admin/login.html";
 }
 
-// ========== MENU HANDLING ==========
+// =========================
+// SECTIONS
+// =========================
 const sections = {
     dashboard: document.getElementById("sectionDashboard"),
     users: document.getElementById("sectionUsers"),
@@ -14,61 +17,70 @@ const sections = {
     performance: document.getElementById("sectionPerformance"),
 };
 
-function hideAllSections() {
-    Object.values(sections).forEach(sec => sec.classList.add("hidden-section"));
+// Hide all sections
+function hideAll() {
+    Object.values(sections).forEach(sec => sec.classList.add("hidden"));
 }
 
-function activateMenu(menuId) {
-    document.querySelectorAll("aside nav a").forEach(a => a.classList.remove("active-menu"));
-    document.getElementById(menuId).classList.add("active-menu");
+// Activate menu
+function activateMenu(id) {
+    document.querySelectorAll("aside nav a")
+        .forEach(a => a.classList.remove("active-menu"));
+    document.getElementById(id).classList.add("active-menu");
 }
 
+// =========================
+// MENU BUTTON HANDLERS
+// =========================
 document.getElementById("menuDashboard").onclick = () => {
-    hideAllSections();
-    sections.dashboard.classList.remove("hidden-section");
+    hideAll();
+    sections.dashboard.classList.remove("hidden");
     activateMenu("menuDashboard");
-    loadDashboardStats();
+    dashboard.loadStats();   // FIXED
 };
 
 document.getElementById("menuUsers").onclick = () => {
-    hideAllSections();
-    sections.users.classList.remove("hidden-section");
+    hideAll();
+    sections.users.classList.remove("hidden");
     activateMenu("menuUsers");
-    loadUsers();
+    usersManager.loadUsers();   // FIXED
 };
 
 document.getElementById("menuCreateUser").onclick = () => {
-    hideAllSections();
-    sections.createUser.classList.remove("hidden-section");
+    hideAll();
+    sections.createUser.classList.remove("hidden");
     activateMenu("menuCreateUser");
 };
 
 document.getElementById("menuAttendance").onclick = () => {
-    hideAllSections();
-    sections.attendance.classList.remove("hidden-section");
+    hideAll();
+    sections.attendance.classList.remove("hidden");
     activateMenu("menuAttendance");
-    loadAttendance();
+    attendanceManager.loadAttendance();   // FIXED
 };
 
 document.getElementById("menuCallHistory").onclick = () => {
-    hideAllSections();
-    sections.callHistory.classList.remove("hidden-section");
+    hideAll();
+    sections.callHistory.classList.remove("hidden");
     activateMenu("menuCallHistory");
-    loadCallHistory();
+    callHistoryManager.loadCallHistory();   // FIXED
 };
 
 document.getElementById("menuPerformance").onclick = () => {
-    hideAllSections();
-    sections.performance.classList.remove("hidden-section");
+    hideAll();
+    sections.performance.classList.remove("hidden");
     activateMenu("menuPerformance");
-    loadPerformance();
+    dashboard.renderPerformanceChart();   // FIXED
 };
 
-// ========== LOGOUT ==========
+// =========================
+// LOGOUT
+// =========================
 document.getElementById("logoutBtn").onclick = () => {
-    sessionStorage.clear();
-    window.location.href = "/admin/login.html";
+    auth.logout();   // FIXED
 };
 
-// Load stats on page start
-loadDashboardStats();
+// =========================
+// AUTO LOAD DASHBOARD
+// =========================
+dashboard.loadStats();
