@@ -64,7 +64,8 @@
     </p>
 </div>
 
-<div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+<!-- FIXED TO MATCH AUTH.JS -->
+<div id="notificationArea" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
 <script src="/admin/js/auth.js"></script>
 
@@ -77,16 +78,16 @@ document.addEventListener("DOMContentLoaded", () => {
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const email = email.value.trim();
+        const emailValue = document.getElementById("email").value.trim();
         const password = document.getElementById("password").value.trim();
 
-        if (!email || !password) {
+        if (!emailValue || !password) {
             auth.showNotification("Please fill all fields", "error");
             return;
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!emailRegex.test(emailValue)) {
             auth.showNotification("Invalid email address", "error");
             return;
         }
@@ -98,13 +99,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const resp = await fetch("/api/admin/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email: emailValue, password }),
             });
 
             const data = await resp.json();
 
             if (resp.ok) {
-                auth.saveLogin("admin", data.access_token, data.user);
+                auth.saveLogin(data.access_token, data.user);   // FIXED
                 auth.showNotification("Login Successful", "success");
                 setTimeout(() => window.location.href = "/admin/index.html", 700);
             } else {
