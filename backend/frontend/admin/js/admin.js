@@ -1,4 +1,11 @@
 // =========================
+// SAFE ELEMENT HELPER
+// =========================
+function el(id) {
+    return document.getElementById(id);
+}
+
+// =========================
 // AUTH CHECK
 // =========================
 if (!auth.getToken()) {
@@ -6,81 +13,110 @@ if (!auth.getToken()) {
 }
 
 // =========================
-// SECTIONS
+// REQUIRED GLOBAL OBJECT CHECK
+// =========================
+if (!window.dashboard) console.warn("dashboard object missing");
+if (!window.usersManager) console.warn("usersManager missing");
+if (!window.attendanceManager) console.warn("attendanceManager missing");
+if (!window.callHistoryManager) console.warn("callHistoryManager missing");
+
+// =========================
+// SECTION REFERENCES
 // =========================
 const sections = {
-    dashboard: document.getElementById("sectionDashboard"),
-    users: document.getElementById("sectionUsers"),
-    createUser: document.getElementById("sectionCreateUser"),
-    attendance: document.getElementById("sectionAttendance"),
-    callHistory: document.getElementById("sectionCallHistory"),
-    performance: document.getElementById("sectionPerformance"),
+    dashboard: el("sectionDashboard"),
+    users: el("sectionUsers"),
+    createUser: el("sectionCreateUser"),
+    attendance: el("sectionAttendance"),
+    callHistory: el("sectionCallHistory"),
+    performance: el("sectionPerformance"),
 };
 
 // Hide all sections
 function hideAll() {
-    Object.values(sections).forEach(sec => sec.classList.add("hidden"));
+    Object.values(sections).forEach(sec => {
+        if (sec) sec.classList.add("hidden");
+    });
 }
 
-// Activate menu
+// Activate menu item
 function activateMenu(id) {
     document.querySelectorAll("aside nav a")
         .forEach(a => a.classList.remove("active-menu"));
-    document.getElementById(id).classList.add("active-menu");
+
+    const menu = el(id);
+    if (menu) menu.classList.add("active-menu");
 }
 
 // =========================
-// MENU BUTTON HANDLERS
+// MENU HANDLERS (SAFE)
 // =========================
-document.getElementById("menuDashboard").onclick = () => {
-    hideAll();
-    sections.dashboard.classList.remove("hidden");
-    activateMenu("menuDashboard");
-    dashboard.loadStats();   // FIXED
-};
+if (el("menuDashboard")) {
+    el("menuDashboard").onclick = () => {
+        hideAll();
+        sections.dashboard?.classList.remove("hidden");
+        activateMenu("menuDashboard");
+        dashboard?.loadStats();
+    };
+}
 
-document.getElementById("menuUsers").onclick = () => {
-    hideAll();
-    sections.users.classList.remove("hidden");
-    activateMenu("menuUsers");
-    usersManager.loadUsers();   // FIXED
-};
+if (el("menuUsers")) {
+    el("menuUsers").onclick = () => {
+        hideAll();
+        sections.users?.classList.remove("hidden");
+        activateMenu("menuUsers");
+        usersManager?.loadUsers();
+    };
+}
 
-document.getElementById("menuCreateUser").onclick = () => {
-    hideAll();
-    sections.createUser.classList.remove("hidden");
-    activateMenu("menuCreateUser");
-};
+if (el("menuCreateUser")) {
+    el("menuCreateUser").onclick = () => {
+        hideAll();
+        sections.createUser?.classList.remove("hidden");
+        activateMenu("menuCreateUser");
+    };
+}
 
-document.getElementById("menuAttendance").onclick = () => {
-    hideAll();
-    sections.attendance.classList.remove("hidden");
-    activateMenu("menuAttendance");
-    attendanceManager.loadAttendance();   // FIXED
-};
+if (el("menuAttendance")) {
+    el("menuAttendance").onclick = () => {
+        hideAll();
+        sections.attendance?.classList.remove("hidden");
+        activateMenu("menuAttendance");
+        attendanceManager?.loadAttendance();
+    };
+}
 
-document.getElementById("menuCallHistory").onclick = () => {
-    hideAll();
-    sections.callHistory.classList.remove("hidden");
-    activateMenu("menuCallHistory");
-    callHistoryManager.loadCallHistory();   // FIXED
-};
+if (el("menuCallHistory")) {
+    el("menuCallHistory").onclick = () => {
+        hideAll();
+        sections.callHistory?.classList.remove("hidden");
+        activateMenu("menuCallHistory");
+        callHistoryManager?.loadCallHistory();
+    };
+}
 
-document.getElementById("menuPerformance").onclick = () => {
-    hideAll();
-    sections.performance.classList.remove("hidden");
-    activateMenu("menuPerformance");
-    dashboard.renderPerformanceChart();   // FIXED
-};
+if (el("menuPerformance")) {
+    el("menuPerformance").onclick = () => {
+        hideAll();
+        sections.performance?.classList.remove("hidden");
+        activateMenu("menuPerformance");
+        dashboard?.renderPerformanceChart();
+    };
+}
 
 // =========================
 // LOGOUT
 // =========================
-document.getElementById("logoutBtn").onclick = () => {
-    auth.logout();   // FIXED
-};
+if (el("logoutBtn")) {
+    el("logoutBtn").onclick = () => {
+        auth.logout();
+    };
+}
 
 // =========================
-// AUTO LOAD DASHBOARD
+// ON PAGE LOAD
 // =========================
-dashboard.loadStats();
+hideAll();
+sections.dashboard?.classList.remove("hidden");
+dashboard?.loadStats();
+activateMenu("menuDashboard");
