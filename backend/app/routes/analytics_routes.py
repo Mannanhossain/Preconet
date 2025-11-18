@@ -1,263 +1,298 @@
-from flask import Blueprint, request, jsonify
+# app/routes/call_analytics.py
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from datetime import datetime, timedelta
-from extensions import db
-from ..models import User, CallHistory, Attendance
-from sqlalchemy import func
+from datetime import datetime, timedelta, date
+from sqlalchemy import func, and_, case
+from app.models import db, User, Admin, CallHistory, Attendance
 
-analytics_bp = Blueprint("analytics", __name__)
+bp = Blueprint("call_analytics", __name__, url_prefix="/api")
 
+# -------------------------------------------------------
+# Helpers
+# -------------------------------------------------------
+def admin_required():
+    claims = get_jwt()
+    return claims.get("role") == "admin"
 
-# ------------------------------------------------
-# Helper Functions
-# ------------------------------------------------
 def iso(dt):
     if not dt:
         return None
     try:
         return dt.isoformat()
-    except:
+    except Exception:
         return str(dt)
 
-
-def admin_required():
-    claims = get_jwt()
-    return claims.get("role") == "admin"
-
-
-def calculate_performance(user_id):
-    """ Heuristic performance calculation (attendance + calls) """
-
-    # Attendance performance
-    total_att = db.session.query(func.count(Attendance.id)).filter_by(user_id=user_id).scalar() or 0
-    on_time = db.session.query(func.count(Attendance.id)).filter(
-        Attendance.user_id == user_id,
-        Attendance.status == "on-time"
-    ).scalar() or 0
-    att_score = (on_time / total_att * 100) if total_att else 0
-
-    # Call performance
-    total_calls = db.session.query(func.count(CallHistory.id)).filter_by(user_id=user_id).scalar() or 0
-    answered = db.session.query(func.count(CallHistory.id)).filter(
-        CallHistory.user_id == user_id,
-        CallHistory.duration > 0
-    ).scalar() or 0
-    call_score = (answered / total_calls * 100) if total_calls else 0
-
-    return round(att_score * 0.6 + call_score * 0.4, 2)
-
-
-def paginate(query, serializer):
+def parse_int_query(name, default, min_v=None, max_v=None):
     try:
-        page = max(1, int(request.args.get("page", 1)))
-    except:
-        page = 1
+        v = int(request.args.get(name, default))
+    except Exception:
+        v = default
+    if min_v is not None:
+        v = max(min_v, v)
+    if max_v is not None:
+        v = min(max_v, v)
+    return v
 
-    try:
-        per_page = min(200, max(10, int(request.args.get("per_page", 25))))
-    except:
-        per_page = 25
-
-    result = query.paginate(page=page, per_page=per_page, error_out=False)
-    return {
-        "items": [serializer(i) for i in result.items],
-        "meta": {
-            "page": result.page,
-            "per_page": result.per_page,
-            "total": result.total,
-            "pages": result.pages,
-            "has_next": result.has_next,
-        }
-    }
-
-
-# ------------------------------------------------
-# 1️⃣ USER SYNC CALL HISTORY
-# ------------------------------------------------
-@analytics_bp.route("/api/user/sync-call-history", methods=["POST"])
+# -------------------------------------------------------
+# Admin: aggregate call analytics across admin's users
+# GET /api/admin/call-analytics
+# -------------------------------------------------------
+@bp.route("/admin/call-analytics", methods=["GET"])
 @jwt_required()
-def sync_call_history():
+def admin_call_analytics():
     try:
-        user_id = get_jwt_identity()
-        data = request.json or {}
+        if not admin_required():
+            return jsonify({"error": "Admin access only"}), 403
 
-        call_list = data.get("call_history", [])
-        sync_raw = data.get("sync_timestamp") or (datetime.utcnow().timestamp() * 1000)
-        sync_dt = datetime.fromtimestamp(sync_raw / 1000)
+        admin_id = get_jwt_identity()
+        try:
+            admin_id = int(admin_id)
+        except Exception:
+            return jsonify({"error": "Invalid admin identity"}), 401
 
-        saved = 0
+        admin = Admin.query.get(admin_id)
+        if not admin or not getattr(admin, "is_active", True):
+            return jsonify({"error": "Admin inactive"}), 403
 
-        for item in call_list:
-            ts_raw = item.get("timestamp")
-            number = item.get("number")
+        # get users under this admin
+        users = User.query.filter_by(admin_id=admin.id).all()
+        user_ids = [u.id for u in users]
+        if not user_ids:
+            return jsonify({
+                "total_calls": 0,
+                "incoming": 0,
+                "outgoing": 0,
+                "missed": 0,
+                "rejected": 0,
+                "total_duration": 0,
+                "daily_series": {"labels": [], "values": []},
+                "user_summary": []
+            }), 200
 
-            if not ts_raw or not number:
-                continue
+        # Global counts
+        total_calls_q = db.session.query(func.count(CallHistory.id)).filter(CallHistory.user_id.in_(user_ids))
+        incoming_q = db.session.query(func.count(CallHistory.id)).filter(CallHistory.user_id.in_(user_ids), CallHistory.call_type == "incoming")
+        outgoing_q = db.session.query(func.count(CallHistory.id)).filter(CallHistory.user_id.in_(user_ids), CallHistory.call_type == "outgoing")
+        missed_q = db.session.query(func.count(CallHistory.id)).filter(CallHistory.user_id.in_(user_ids), CallHistory.call_type == "missed")
+        rejected_q = db.session.query(func.count(CallHistory.id)).filter(CallHistory.user_id.in_(user_ids), CallHistory.call_type == "rejected")
+        total_duration_q = db.session.query(func.coalesce(func.sum(CallHistory.duration), 0)).filter(CallHistory.user_id.in_(user_ids))
 
-            call_ts = datetime.fromtimestamp(ts_raw / 1000)
+        total_calls = int(total_calls_q.scalar() or 0)
+        incoming = int(incoming_q.scalar() or 0)
+        outgoing = int(outgoing_q.scalar() or 0)
+        missed = int(missed_q.scalar() or 0)
+        rejected = int(rejected_q.scalar() or 0)
+        total_duration = int(total_duration_q.scalar() or 0)
 
-            # *** Duplicate Prevention ***
-            exists = CallHistory.query.filter_by(
-                user_id=user_id,
-                timestamp=call_ts,
-                phone_number=number
-            ).first()
+        # Daily trend - last N days (default 7)
+        days = parse_int_query("days", 7, min_v=1, max_v=90)
+        end_date = datetime.utcnow().date()
+        start_date = end_date - timedelta(days=days - 1)
 
-            if exists:
-                continue
+        # Group by date
+        # Note: use database date conversion. For portability we use func.date()
+        trend_rows = db.session.query(
+            func.date(CallHistory.timestamp).label("d"),
+            func.count(CallHistory.id).label("cnt")
+        ).filter(
+            CallHistory.user_id.in_(user_ids),
+            CallHistory.timestamp >= datetime.combine(start_date, datetime.min.time())
+        ).group_by(func.date(CallHistory.timestamp)) \
+         .order_by(func.date(CallHistory.timestamp)).all()
 
-            call = CallHistory(
-                user_id=user_id,
-                phone_number=number,
-                formatted_number=item.get("formatted_number", ""),
-                call_type=item.get("call_type", "unknown"),
-                timestamp=call_ts,
-                duration=item.get("duration", 0),
-                contact_name=item.get("name", ""),
-                sync_timestamp=sync_dt,
-            )
+        # Build labels & values for all days in range
+        labels = []
+        values = []
+        trend_map = {row.d: int(row.cnt) for row in trend_rows}
+        for i in range(days):
+            day = start_date + timedelta(days=i)
+            labels.append(day.strftime("%d %b"))
+            values.append(trend_map.get(day, 0))
 
-            db.session.add(call)
-            saved += 1
+        # Per-user summary (incoming/outgoing/missed, total duration)
+        # Use SQL aggregation joined with users to get names
+        # We use conditional sum via case expressions for counts per type
+        incoming_case = func.sum(case([(CallHistory.call_type == "incoming", 1)], else_=0))
+        outgoing_case = func.sum(case([(CallHistory.call_type == "outgoing", 1)], else_=0))
+        missed_case = func.sum(case([(CallHistory.call_type == "missed", 1)], else_=0))
 
-        db.session.commit()
+        summary_rows = db.session.query(
+            User.id.label("user_id"),
+            User.name.label("user_name"),
+            func.count(CallHistory.id).label("total_calls"),
+            func.coalesce(func.sum(CallHistory.duration), 0).label("total_duration"),
+            incoming_case.label("incoming"),
+            outgoing_case.label("outgoing"),
+            missed_case.label("missed")
+        ).join(CallHistory, CallHistory.user_id == User.id) \
+         .filter(User.id.in_(user_ids)) \
+         .group_by(User.id, User.name) \
+         .order_by(func.count(CallHistory.id).desc()) \
+         .all()
 
-        # Update user last_sync
-        user = User.query.get(user_id)
-        user.last_sync = datetime.utcnow()
-        user.performance_score = calculate_performance(user_id)
-        db.session.commit()
+        user_summary = []
+        for r in summary_rows:
+            user_summary.append({
+                "user_id": int(r.user_id),
+                "user_name": r.user_name,
+                "incoming": int(r.incoming or 0),
+                "outgoing": int(r.outgoing or 0),
+                "missed": int(r.missed or 0),
+                "total_calls": int(r.total_calls or 0),
+                "total_duration": f"{int(r.total_duration or 0)}s"
+            })
 
         return jsonify({
-            "message": "Call history synced",
-            "calls_saved": saved
+            "total_calls": total_calls,
+            "incoming": incoming,
+            "outgoing": outgoing,
+            "missed": missed,
+            "rejected": rejected,
+            "total_duration": total_duration,
+            "daily_series": {"labels": labels, "values": values},
+            "user_summary": user_summary
         }), 200
 
     except Exception as e:
-        db.session.rollback()
+        current_app.logger.exception("admin_call_analytics error")
         return jsonify({"error": str(e)}), 500
 
-
-# ------------------------------------------------
-# 2️⃣ USER SYNC ANALYTICS SUMMARY
-# ------------------------------------------------
-@analytics_bp.route("/api/user/sync-analytics", methods=["POST"])
+# -------------------------------------------------------
+# Admin: get analytics for a single user (paginated)
+# GET /api/admin/user-call-analytics/<user_id>
+# -------------------------------------------------------
+@bp.route("/admin/user-call-analytics/<int:user_id>", methods=["GET"])
 @jwt_required()
-def sync_analytics():
+def admin_user_call_analytics(user_id):
     try:
-        user_id = get_jwt_identity()
-        data = request.json or {}
+        if not admin_required():
+            return jsonify({"error": "Admin access only"}), 403
 
-        sync_raw = data.get("sync_timestamp")
-        if not sync_raw:
-            return jsonify({"error": "sync_timestamp missing"}), 400
+        admin_id = get_jwt_identity()
+        try:
+            admin_id = int(admin_id)
+        except Exception:
+            return jsonify({"error": "Invalid admin identity"}), 401
 
-        sync_dt = datetime.fromtimestamp(sync_raw / 1000)
+        admin = Admin.query.get(admin_id)
+        if not admin or not getattr(admin, "is_active", True):
+            return jsonify({"error": "Admin inactive"}), 403
 
-        # Update user performance directly (no need to store separate analytics summary)
         user = User.query.get(user_id)
-        user.last_sync = datetime.utcnow()
-        user.performance_score = calculate_performance(user_id)
+        if not user or user.admin_id != admin_id:
+            return jsonify({"error": "Unauthorized (not your user)"}), 403
 
-        db.session.commit()
+        # pagination
+        page = parse_int_query("page", 1, min_v=1)
+        per_page = parse_int_query("per_page", 25, min_v=1, max_v=200)
 
-        return jsonify({"message": "Analytics synced"}), 200
+        days = parse_int_query("days", 30, min_v=1, max_v=365)
+        from_dt = datetime.utcnow() - timedelta(days=days)
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-
-# ------------------------------------------------
-# 3️⃣ ADMIN — GET USER FULL ANALYTICS (SECURE)
-# ------------------------------------------------
-@analytics_bp.route("/api/admin/user-analytics/<int:user_id>", methods=["GET"])
-@jwt_required()
-def admin_user_analytics(user_id):
-    if not admin_required():
-        return jsonify({"error": "Admin only"}), 403
-
-    admin_id = get_jwt_identity()
-
-    user = User.query.get(user_id)
-    if not user or user.admin_id != admin_id:
-        return jsonify({"error": "Unauthorized"}), 403
-
-    try:
-        days = request.args.get("days", 30, type=int)
-        from_date = datetime.utcnow() - timedelta(days=days)
-
-        query = CallHistory.query.filter(
+        q = CallHistory.query.filter(
             CallHistory.user_id == user_id,
-            CallHistory.created_at >= from_date
-        ).order_by(CallHistory.created_at.desc())
+            CallHistory.timestamp >= from_dt
+        ).order_by(CallHistory.timestamp.desc())
 
-        def serialize(c):
-            return {
-                "id": c.id,
-                "number": c.phone_number,
-                "name": c.contact_name,
-                "duration": c.duration,
-                "call_type": c.call_type,
-                "timestamp": iso(c.timestamp),
-                "created_at": iso(c.created_at),
-            }
+        pag = q.paginate(page=page, per_page=per_page, error_out=False)
 
-        paginated = paginate(query, serialize)
+        items = [{
+            "id": c.id,
+            "number": c.number,
+            "formatted_number": getattr(c, "formatted_number", None),
+            "name": getattr(c, "name", None),
+            "call_type": c.call_type,
+            "duration": c.duration,
+            "timestamp": iso(c.timestamp),
+            "created_at": iso(c.created_at)
+        } for c in pag.items]
 
-        # summary
-        total_calls = db.session.query(func.count(CallHistory.id)).filter_by(user_id=user_id).scalar() or 0
-        total_duration = db.session.query(func.sum(CallHistory.duration)).filter_by(user_id=user_id).scalar() or 0
+        # summary for range
+        total_calls = db.session.query(func.count(CallHistory.id)).filter(
+            CallHistory.user_id == user_id,
+            CallHistory.timestamp >= from_dt
+        ).scalar() or 0
+
+        total_duration = db.session.query(func.coalesce(func.sum(CallHistory.duration), 0)).filter(
+            CallHistory.user_id == user_id,
+            CallHistory.timestamp >= from_dt
+        ).scalar() or 0
 
         return jsonify({
             "user_id": user_id,
+            "user_name": user.name,
             "performance": user.performance_score,
-            "analytics": paginated["items"],
-            "meta": paginated["meta"],
+            "analytics": items,
+            "meta": {
+                "page": pag.page,
+                "per_page": pag.per_page,
+                "total": pag.total,
+                "pages": pag.pages,
+                "has_next": pag.has_next,
+                "has_prev": pag.has_prev
+            },
             "summary": {
-                "total_calls": total_calls,
-                "total_duration": total_duration
+                "total_calls": int(total_calls),
+                "total_duration": int(total_duration)
             }
-        })
+        }), 200
 
     except Exception as e:
+        current_app.logger.exception("admin_user_call_analytics error")
         return jsonify({"error": str(e)}), 500
 
-
-# ------------------------------------------------
-# 4️⃣ USER — MY ANALYTICS (SECURE)
-# ------------------------------------------------
-@analytics_bp.route("/api/user/my-analytics", methods=["GET"])
+# -------------------------------------------------------
+# User: my call analytics (paginated)
+# GET /api/user/my-call-analytics
+# -------------------------------------------------------
+@bp.route("/user/my-call-analytics", methods=["GET"])
 @jwt_required()
-def my_analytics():
+def user_my_call_analytics():
     try:
         user_id = get_jwt_identity()
-        days = request.args.get("days", 30, type=int)
-        from_date = datetime.utcnow() - timedelta(days=days)
+        try:
+            user_id = int(user_id)
+        except Exception:
+            return jsonify({"error": "Invalid identity"}), 401
 
-        query = CallHistory.query.filter(
+        page = parse_int_query("page", 1, min_v=1)
+        per_page = parse_int_query("per_page", 25, min_v=1, max_v=200)
+        days = parse_int_query("days", 30, min_v=1, max_v=365)
+        from_dt = datetime.utcnow() - timedelta(days=days)
+
+        q = CallHistory.query.filter(
             CallHistory.user_id == user_id,
-            CallHistory.created_at >= from_date
-        ).order_by(CallHistory.created_at.desc())
+            CallHistory.timestamp >= from_dt
+        ).order_by(CallHistory.timestamp.desc())
 
-        def serialize(c):
-            return {
-                "id": c.id,
-                "number": c.phone_number,
-                "name": c.contact_name,
-                "duration": c.duration,
-                "call_type": c.call_type,
-                "timestamp": iso(c.timestamp)
-            }
+        pag = q.paginate(page=page, per_page=per_page, error_out=False)
 
-        paginated = paginate(query, serialize)
+        items = [{
+            "id": c.id,
+            "number": c.number,
+            "formatted_number": getattr(c, "formatted_number", None),
+            "name": getattr(c, "name", None),
+            "call_type": c.call_type,
+            "duration": c.duration,
+            "timestamp": iso(c.timestamp)
+        } for c in pag.items]
+
+        user = User.query.get(user_id)
 
         return jsonify({
             "user_id": user_id,
-            "performance": User.query.get(user_id).performance_score,
-            "data": paginated["items"],
-            "meta": paginated["meta"]
-        })
+            "performance": getattr(user, "performance_score", None),
+            "data": items,
+            "meta": {
+                "page": pag.page,
+                "per_page": pag.per_page,
+                "total": pag.total,
+                "pages": pag.pages,
+                "has_next": pag.has_next,
+                "has_prev": pag.has_prev
+            }
+        }), 200
 
     except Exception as e:
+        current_app.logger.exception("user_my_call_analytics error")
         return jsonify({"error": str(e)}), 500
