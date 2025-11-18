@@ -6,8 +6,10 @@
     <title>Call Manager Pro - Admin Panel</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CHART.JS CDN - REQUIRED FOR DASHBOARD -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         .hidden-section { display: none; }
@@ -19,63 +21,44 @@
 
 <!-- ================= SIDEBAR ================= -->
 <div class="flex h-screen">
-
     <aside class="w-64 bg-white shadow-lg flex flex-col">
-
         <div class="p-6 border-b border-gray-200">
             <h1 class="text-xl font-bold text-gray-800">Admin Panel</h1>
             <p class="text-sm text-gray-500">Call Manager Pro</p>
         </div>
 
         <nav class="flex-1 p-4 space-y-2">
-
-            <a id="menuDashboard"
-               class="menu-item active-menu flex items-center space-x-3 p-3 rounded cursor-pointer">
+            <a id="menuDashboard" class="menu-item active-menu flex items-center space-x-3 p-3 rounded cursor-pointer">
                 <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
             </a>
-
-            <a id="menuUsers"
-               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+            <a id="menuUsers" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
                 <i class="fas fa-users"></i> <span>Users</span>
             </a>
-
-            <a id="menuCreateUser"
-               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+            <a id="menuCreateUser" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
                 <i class="fas fa-user-plus"></i> <span>Create User</span>
             </a>
-
-            <a id="menuAttendance"
-               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+            <a id="menuAttendance" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
                 <i class="fas fa-calendar-check"></i> <span>Attendance</span>
             </a>
-
-            <a id="menuCallHistory"
-               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+            <a id="menuCallHistory" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
                 <i class="fas fa-phone-alt"></i> <span>Call History</span>
             </a>
-
-            <a id="menuPerformance"
-               class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+            <a id="menuPerformance" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
                 <i class="fas fa-chart-line"></i> <span>Performance</span>
             </a>
-
         </nav>
 
-        <button id="logoutBtn"
-                class="m-4 bg-red-600 text-white p-2 rounded text-center">
+        <button id="logoutBtn" class="m-4 bg-red-600 text-white p-2 rounded text-center">
             <i class="fas fa-sign-out-alt"></i> Logout
         </button>
     </aside>
 
     <!-- ================= MAIN CONTENT ================= -->
     <main class="flex-1 overflow-auto p-6">
-
         <!-- ========== Dashboard Section ========== -->
         <section id="sectionDashboard">
             <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
-
             <div id="stats-cards" class="grid grid-cols-1 md:grid-cols-4 gap-4"></div>
-
             <div class="mt-6">
                 <canvas id="performanceChart" height="120"></canvas>
             </div>
@@ -84,7 +67,6 @@
         <!-- ========== Users Section ========== -->
         <section id="sectionUsers" class="hidden-section">
             <h2 class="text-2xl font-bold mb-4">Users</h2>
-
             <table class="w-full bg-white rounded shadow overflow-hidden">
                 <thead class="bg-gray-200 text-left">
                     <tr>
@@ -95,7 +77,6 @@
                         <th class="p-3 text-right">Actions</th>
                     </tr>
                 </thead>
-
                 <tbody id="users-table-body"></tbody>
             </table>
         </section>
@@ -103,41 +84,26 @@
         <!-- ========== Create User Section ========== -->
         <section id="sectionCreateUser" class="hidden-section">
             <h2 class="text-2xl font-bold mb-4">Create User</h2>
-
-            <form id="createUserForm"
-                  class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded shadow">
-
+            <form id="createUserForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded shadow">
                 <div class="md:col-span-2">
                     <label class="block text-sm mb-1">Full Name</label>
-                    <input id="userName"
-                           class="border p-2 w-full rounded" required />
+                    <input id="userName" class="border p-2 w-full rounded" required />
                 </div>
-
                 <div>
                     <label class="block text-sm mb-1">Email</label>
-                    <input id="userEmail"
-                           type="email"
-                           class="border p-2 w-full rounded" required />
+                    <input id="userEmail" type="email" class="border p-2 w-full rounded" required />
                 </div>
-
                 <div>
                     <label class="block text-sm mb-1">Phone</label>
-                    <input id="userPhone"
-                           class="border p-2 w-full rounded" />
+                    <input id="userPhone" class="border p-2 w-full rounded" />
                 </div>
-
                 <div class="md:col-span-2">
                     <label class="block text-sm mb-1">Password</label>
-                    <input id="userPassword"
-                           type="password"
-                           class="border p-2 w-full rounded" required />
+                    <input id="userPassword" type="password" class="border p-2 w-full rounded" required />
                 </div>
-
-                <button type="submit"
-                        class="md:col-span-2 bg-blue-600 text-white py-2 rounded">
+                <button type="submit" class="md:col-span-2 bg-blue-600 text-white py-2 rounded">
                     Create User
                 </button>
-
             </form>
         </section>
 
@@ -146,12 +112,12 @@
             <h2 class="text-2xl font-bold mb-4">Attendance</h2>
             <table class="w-full bg-white rounded shadow">
                 <thead class="bg-gray-200">
-                <tr>
-                    <th class="p-3">User</th>
-                    <th class="p-3">Check In</th>
-                    <th class="p-3">Check Out</th>
-                    <th class="p-3">Status</th>
-                </tr>
+                    <tr>
+                        <th class="p-3">User</th>
+                        <th class="p-3">Check In</th>
+                        <th class="p-3">Check Out</th>
+                        <th class="p-3">Status</th>
+                    </tr>
                 </thead>
                 <tbody id="attendance-table-body"></tbody>
             </table>
@@ -160,21 +126,15 @@
         <!-- ========== Call History Section ========== -->
         <section id="sectionCallHistory" class="hidden-section">
             <h2 class="text-2xl font-bold mb-4">Call History</h2>
-
-            <div id="call-history-container"
-                 class="bg-white p-4 rounded shadow"></div>
+            <div id="call-history-container" class="bg-white p-4 rounded shadow"></div>
         </section>
 
         <!-- ========== Performance Section ========== -->
         <section id="sectionPerformance" class="hidden-section">
             <h2 class="text-2xl font-bold mb-4">Performance</h2>
-
-            <div id="performance-container"
-                 class="bg-white p-4 rounded shadow"></div>
+            <div id="performance-container" class="bg-white p-4 rounded shadow"></div>
         </section>
-
     </main>
-
 </div>
 
 <!-- ========== JS SCRIPT FILES ========== -->
@@ -183,6 +143,10 @@
 <script src="/admin/js/users.js"></script>
 
 <script>
+    // CREATE GLOBAL OBJECTS - THIS IS THE KEY FIX
+    const dashboard = new Dashboard();
+    const usersManager = new UsersManager();
+
     /* ============= MENU HANDLER ============= */
     const sections = {
         dashboard: sectionDashboard,
@@ -198,6 +162,7 @@
         document.querySelectorAll(".menu-item").forEach(m => m.classList.remove("active-menu"));
     }
 
+    // Menu click handlers
     menuDashboard.onclick = () => {
         hideAll();
         sectionDashboard.classList.remove("hidden-section");
@@ -222,24 +187,30 @@
         hideAll();
         sectionAttendance.classList.remove("hidden-section");
         menuAttendance.classList.add("active-menu");
-        // ADD API CALL
+        // Add API call: loadAttendance();
     };
 
     menuCallHistory.onclick = () => {
         hideAll();
         sectionCallHistory.classList.remove("hidden-section");
         menuCallHistory.classList.add("active-menu");
-        // ADD API CALL
+        // Add API call: loadCallHistory();
     };
 
     menuPerformance.onclick = () => {
         hideAll();
         sectionPerformance.classList.remove("hidden-section");
         menuPerformance.classList.add("active-menu");
-        // ADD API CALL
+        // Add API call: loadPerformance();
     };
 
     logoutBtn.onclick = () => auth.logout();
+
+    // ========== AUTO-LOAD DASHBOARD ON PAGE LOAD ==========
+    document.addEventListener('DOMContentLoaded', () => {
+        dashboard.init();
+        console.log('✅ Dashboard initialized on page load');
+    });
 </script>
 
 </body>
