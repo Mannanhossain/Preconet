@@ -27,13 +27,14 @@ class Auth {
         return raw ? JSON.parse(raw) : null;
     }
 
-    /* Logout */
+    /* Logout + redirect to login */
     logout() {
         sessionStorage.removeItem(this.roleKey);
         sessionStorage.removeItem(this.tokenKey);
         sessionStorage.removeItem(this.userKey);
 
-        window.location.href = window.location.origin + "/admin/login.html";
+        // ALWAYS redirect to admin login page
+        window.location.href = "/admin/login.html";
     }
 
     /* Authenticated API request */
@@ -45,7 +46,10 @@ class Auth {
             return;
         }
 
-        const fullUrl = url.startsWith("/") ? url : `/${url}`;
+        // Ensure the URL begins with /api
+        const fullUrl = url.startsWith("/api")
+            ? url
+            : `/api${url}`;
 
         const headers = {
             "Content-Type": "application/json",
@@ -55,6 +59,7 @@ class Auth {
 
         const resp = await fetch(fullUrl, { ...options, headers });
 
+        // Auto logout on expired or invalid token
         if (resp.status === 401) {
             this.showNotification("Session expired — please login again", "error");
             this.logout();
@@ -63,7 +68,7 @@ class Auth {
         return resp;
     }
 
-    /* Notification */
+    /* Notification System */
     showNotification(message, type = "info") {
         let area = document.getElementById("notificationArea");
 
@@ -102,4 +107,5 @@ class Auth {
     }
 }
 
+/* Global instance */
 const auth = new Auth();
