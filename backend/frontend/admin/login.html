@@ -6,10 +6,8 @@
     <title>Admin Login - Call Manager Pro</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <style>
         .login-bg {
@@ -20,114 +18,110 @@
 
 <body class="login-bg min-h-screen flex items-center justify-center p-4">
 
-    <div class="max-w-md w-full">
+<div class="max-w-md w-full">
+    <div class="bg-white rounded-2xl shadow-xl p-8">
 
-        <!-- Card -->
-        <div class="bg-white rounded-2xl shadow-xl p-8">
-
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-user-shield text-white text-2xl"></i>
-                </div>
-                <h1 class="text-2xl font-bold text-gray-800">Admin Login</h1>
-                <p class="text-gray-600 mt-2">Login to Call Manager Pro Admin Panel</p>
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-user-shield text-white text-2xl"></i>
             </div>
-
-            <!-- Login Form -->
-            <form id="loginForm" class="space-y-6">
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                    <div class="relative">
-                        <input
-                            type="email"
-                            id="email"
-                            required
-                            placeholder="Enter admin email"
-                            class="w-full px-4 py-3 pl-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                        <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                    <div class="relative">
-                        <input
-                            type="password"
-                            id="password"
-                            required
-                            placeholder="Enter password"
-                            class="w-full px-4 py-3 pl-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                        <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                </div>
-
-                <button
-                    type="submit"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2"
-                >
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span>Login</span>
-                </button>
-            </form>
-
+            <h1 class="text-2xl font-bold text-gray-800">Admin Login</h1>
+            <p class="text-gray-600 mt-2">Login to Call Manager Pro Admin Panel</p>
         </div>
 
-        <p class="text-center text-white mt-6 text-sm">
-            © 2025 Call Manager Pro. All rights reserved.
-        </p>
+        <form id="loginForm" class="space-y-6">
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                <div class="relative">
+                    <input type="email" id="email" required
+                           placeholder="Enter admin email"
+                           class="w-full px-4 py-3 pl-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <div class="relative">
+                    <input type="password" id="password" required
+                           placeholder="Enter password"
+                           class="w-full px-4 py-3 pl-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+
+            <button id="loginBtn" type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Login</span>
+            </button>
+        </form>
     </div>
 
-    <!-- JS -->
-    <script src="/admin/js/auth.js"></script>
+    <p class="text-center text-white mt-6 text-sm">
+        © 2025 Call Manager Pro. All rights reserved.
+    </p>
+</div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const form = document.getElementById("loginForm");
+<div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
-            form.addEventListener("submit", async (e) => {
-                e.preventDefault();
+<script src="/admin/js/auth.js"></script>
 
-                const email = document.getElementById("email").value.trim();
-                const password = document.getElementById("password").value.trim();
+<script>
+document.addEventListener("DOMContentLoaded", () => {
 
-                if (!email || !password) {
-                    auth.showNotification("Please fill all fields", "error");
-                    return;
-                }
+    const form = document.getElementById("loginForm");
+    const btn = document.getElementById("loginBtn");
 
-                try {
-                    const resp = await fetch("/api/admin/login", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ email, password }),
-                    });
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-                    const data = await resp.json();
+        const email = email.value.trim();
+        const password = document.getElementById("password").value.trim();
 
-                    if (resp.ok) {
-                        // Store Token + User
-                        auth.saveLogin("admin", data.access_token, data.user);
+        if (!email || !password) {
+            auth.showNotification("Please fill all fields", "error");
+            return;
+        }
 
-                        auth.showNotification("Login successful!", "success");
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            auth.showNotification("Invalid email address", "error");
+            return;
+        }
 
-                        setTimeout(() => {
-                            window.location.href = "/admin/index.html";
-                        }, 800);
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Logging in...`;
 
-                    } else {
-                        auth.showNotification(data.error || "Login failed", "error");
-                    }
-
-                } catch (err) {
-                    console.error(err);
-                    auth.showNotification("Server error", "error");
-                }
+        try {
+            const resp = await fetch("/api/admin/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
             });
-        });
-    </script>
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                auth.saveLogin("admin", data.access_token, data.user);
+                auth.showNotification("Login Successful", "success");
+                setTimeout(() => window.location.href = "/admin/index.html", 700);
+            } else {
+                auth.showNotification(data.error || "Login failed", "error");
+            }
+
+        } catch (err) {
+            console.error(err);
+            auth.showNotification("Server error", "error");
+
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-sign-in-alt"></i> Login`;
+        }
+    });
+});
+</script>
 
 </body>
 </html>
