@@ -6,10 +6,12 @@ class Auth {
     constructor() {
         this.tokenKey = "admin_token";
         this.userKey = "admin_user";
+        this.roleKey = "admin_role";
     }
 
-    /* Save token + user profile */
-    saveLogin(token, user) {
+    /* Save role + token + user */
+    saveLogin(role, token, user) {
+        sessionStorage.setItem(this.roleKey, role);
         sessionStorage.setItem(this.tokenKey, token);
         sessionStorage.setItem(this.userKey, JSON.stringify(user));
     }
@@ -25,25 +27,25 @@ class Auth {
         return raw ? JSON.parse(raw) : null;
     }
 
-    /* Logout + redirect */
+    /* Logout */
     logout() {
+        sessionStorage.removeItem(this.roleKey);
         sessionStorage.removeItem(this.tokenKey);
         sessionStorage.removeItem(this.userKey);
 
-        window.location.href = "/admin/login.html";   // change if needed
+        window.location.href = window.location.origin + "/admin/login.html";
     }
 
-    /* Authenticated API calls */
+    /* Authenticated API request */
     async makeAuthenticatedRequest(url, options = {}) {
         const token = this.getToken();
 
         if (!token) {
-            console.warn("No token — redirecting");
             this.logout();
             return;
         }
 
-        const fullUrl = url.startsWith("/api") ? url : `/api${url}`;
+        const fullUrl = url.startsWith("/") ? url : `/${url}`;
 
         const headers = {
             "Content-Type": "application/json",
@@ -65,7 +67,6 @@ class Auth {
     showNotification(message, type = "info") {
         let area = document.getElementById("notificationArea");
 
-        // auto-create container if missing
         if (!area) {
             area = document.createElement("div");
             area.id = "notificationArea";
@@ -82,13 +83,13 @@ class Auth {
 
         const div = document.createElement("div");
         div.className = `
-            text-white px-4 py-2 rounded shadow 
+            text-white px-4 py-2 rounded shadow transition
             ${palette[type] || palette.info}
         `;
         div.innerHTML = `
             <div class="flex items-center gap-3">
                 <i class="fas fa-info-circle"></i>
-                <div>${message}</div>
+                <span>${message}</span>
             </div>
         `;
 
@@ -101,5 +102,4 @@ class Auth {
     }
 }
 
-/* global instance */
 const auth = new Auth();
