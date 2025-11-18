@@ -1,84 +1,147 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, timedelta
 from extensions import db
-from ..models import User   # FIXED: added missing import
+from ..models import User, CallHistory, Attendance
+from sqlalchemy import func
 
-analytics_bp = Blueprint('analytics', __name__)
-
-# ---------------------------
-#   DATABASE MODELS
-# ---------------------------
-
-class UserAnalytics(db.Model):
-    __tablename__ = 'user_analytics'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
-    total_calls = db.Column(db.Integer, default=0)
-    incoming_calls = db.Column(db.Integer, default=0)
-    outgoing_calls = db.Column(db.Integer, default=0)
-    missed_calls = db.Column(db.Integer, default=0)
-    rejected_calls = db.Column(db.Integer, default=0)
-
-    total_duration = db.Column(db.Integer, default=0)
-    incoming_duration = db.Column(db.Integer, default=0)
-    outgoing_duration = db.Column(db.Integer, default=0)
-
-    period_days = db.Column(db.Integer, default=0)
-    sync_timestamp = db.Column(db.DateTime, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user = db.relationship('User', backref=db.backref('analytics', lazy=True))
+analytics_bp = Blueprint("analytics", __name__)
 
 
-class CallHistory(db.Model):
-    __tablename__ = 'call_history'
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
-    phone_number = db.Column(db.String(20), nullable=False)
-    formatted_number = db.Column(db.String(50))
-
-    call_type = db.Column(db.String(20), nullable=False)
-    timestamp = db.Column(db.DateTime, nullable=False)
-    duration = db.Column(db.Integer, default=0)
-    contact_name = db.Column(db.String(100))
-
-    sync_timestamp = db.Column(db.DateTime, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user = db.relationship('User', backref=db.backref('call_history', lazy=True))
+# ------------------------------------------------
+# Helper Functions
+# ------------------------------------------------
+def iso(dt):
+    if not dt:
+        return None
+    try:
+        return dt.isoformat()
+    except:
+        return str(dt)
 
 
-class CallMetrics(db.Model):
-    __tablename__ = 'call_metrics'
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
-    total_calls = db.Column(db.Integer, default=0)
-    incoming_calls = db.Column(db.Integer, default=0)
-    outgoing_calls = db.Column(db.Integer, default=0)
-    missed_calls = db.Column(db.Integer, default=0)
-    rejected_calls = db.Column(db.Integer, default=0)
-
-    total_duration = db.Column(db.Integer, default=0)
-    period_days = db.Column(db.Integer, default=0)
-
-    sync_timestamp = db.Column(db.DateTime, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user = db.relationship('User', backref=db.backref('call_metrics', lazy=True))
+def admin_required():
+    claims = get_jwt()
+    return claims.get("role") == "admin"
 
 
-# ---------------------------
-#   SYNC ANALYTICS
-# ---------------------------
+def calculate_performance(user_id):
+    """ Heuristic performance calculation (attendance + calls) """
 
-@analytics_bp.route('/api/user/sync-analytics', methods=['POST'])
+    # Attendance performance
+    total_att = db.session.query(func.count(Attendance.id)).filter_by(user_id=user_id).scalar() or 0
+    on_time = db.session.query(func.count(Attendance.id)).filter(
+        Attendance.user_id == user_id,
+        Attendance.status == "on-time"
+    ).scalar() or 0
+    att_score = (on_time / total_att * 100) if total_att else 0
+
+    # Call performance
+    total_calls = db.session.query(func.count(CallHistory.id)).filter_by(user_id=user_id).scalar() or 0
+    answered = db.session.query(func.count(CallHistory.id)).filter(
+        CallHistory.user_id == user_id,
+        CallHistory.duration > 0
+    ).scalar() or 0
+    call_score = (answered / total_calls * 100) if total_calls else 0
+
+    return round(att_score * 0.6 + call_score * 0.4, 2)
+
+
+def paginate(query, serializer):
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except:
+        page = 1
+
+    try:
+        per_page = min(200, max(10, int(request.args.get("per_page", 25))))
+    except:
+        per_page = 25
+
+    result = query.paginate(page=page, per_page=per_page, error_out=False)
+    return {
+        "items": [serializer(i) for i in result.items],
+        "meta": {
+            "page": result.page,
+            "per_page": result.per_page,
+            "total": result.total,
+            "pages": result.pages,
+            "has_next": result.has_next,
+        }
+    }
+
+
+# ------------------------------------------------
+# 1️⃣ USER SYNC CALL HISTORY
+# ------------------------------------------------
+@analytics_bp.route("/api/user/sync-call-history", methods=["POST"])
+@jwt_required()
+def sync_call_history():
+    try:
+        user_id = get_jwt_identity()
+        data = request.json or {}
+
+        call_list = data.get("call_history", [])
+        sync_raw = data.get("sync_timestamp") or (datetime.utcnow().timestamp() * 1000)
+        sync_dt = datetime.fromtimestamp(sync_raw / 1000)
+
+        saved = 0
+
+        for item in call_list:
+            ts_raw = item.get("timestamp")
+            number = item.get("number")
+
+            if not ts_raw or not number:
+                continue
+
+            call_ts = datetime.fromtimestamp(ts_raw / 1000)
+
+            # *** Duplicate Prevention ***
+            exists = CallHistory.query.filter_by(
+                user_id=user_id,
+                timestamp=call_ts,
+                phone_number=number
+            ).first()
+
+            if exists:
+                continue
+
+            call = CallHistory(
+                user_id=user_id,
+                phone_number=number,
+                formatted_number=item.get("formatted_number", ""),
+                call_type=item.get("call_type", "unknown"),
+                timestamp=call_ts,
+                duration=item.get("duration", 0),
+                contact_name=item.get("name", ""),
+                sync_timestamp=sync_dt,
+            )
+
+            db.session.add(call)
+            saved += 1
+
+        db.session.commit()
+
+        # Update user last_sync
+        user = User.query.get(user_id)
+        user.last_sync = datetime.utcnow()
+        user.performance_score = calculate_performance(user_id)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Call history synced",
+            "calls_saved": saved
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+# ------------------------------------------------
+# 2️⃣ USER SYNC ANALYTICS SUMMARY
+# ------------------------------------------------
+@analytics_bp.route("/api/user/sync-analytics", methods=["POST"])
 @jwt_required()
 def sync_analytics():
     try:
@@ -91,129 +154,69 @@ def sync_analytics():
 
         sync_dt = datetime.fromtimestamp(sync_raw / 1000)
 
-        analytics = UserAnalytics(
-            user_id=user_id,
-            total_calls=data.get("total_calls", 0),
-            incoming_calls=data.get("incoming_calls", 0),
-            outgoing_calls=data.get("outgoing_calls", 0),
-            missed_calls=data.get("missed_calls", 0),
-            rejected_calls=data.get("rejected_calls", 0),
-            total_duration=data.get("total_duration", 0),
-            incoming_duration=data.get("incoming_duration", 0),
-            outgoing_duration=data.get("outgoing_duration", 0),
-            period_days=data.get("period_days", 0),
-            sync_timestamp=sync_dt
-        )
+        # Update user performance directly (no need to store separate analytics summary)
+        user = User.query.get(user_id)
+        user.last_sync = datetime.utcnow()
+        user.performance_score = calculate_performance(user_id)
 
-        db.session.add(analytics)
         db.session.commit()
 
-        return jsonify({"message": "Analytics synced successfully", "analytics_id": analytics.id}), 200
+        return jsonify({"message": "Analytics synced"}), 200
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 
-# ---------------------------
-#   SYNC CALL HISTORY
-# ---------------------------
-
-@analytics_bp.route('/api/user/sync-call-history', methods=['POST'])
+# ------------------------------------------------
+# 3️⃣ ADMIN — GET USER FULL ANALYTICS (SECURE)
+# ------------------------------------------------
+@analytics_bp.route("/api/admin/user-analytics/<int:user_id>", methods=["GET"])
 @jwt_required()
-def sync_call_history():
-    try:
-        user_id = get_jwt_identity()
-        data = request.json or {}
+def admin_user_analytics(user_id):
+    if not admin_required():
+        return jsonify({"error": "Admin only"}), 403
 
-        call_list = data.get("call_history", [])
-        sync_raw = data.get("sync_timestamp")
+    admin_id = get_jwt_identity()
 
-        if not sync_raw:
-            sync_raw = datetime.utcnow().timestamp() * 1000
+    user = User.query.get(user_id)
+    if not user or user.admin_id != admin_id:
+        return jsonify({"error": "Unauthorized"}), 403
 
-        sync_dt = datetime.fromtimestamp(sync_raw / 1000)
-
-        saved = 0
-
-        for item in call_list:
-
-            ts_raw = item.get("timestamp")
-            if not ts_raw:
-                continue  # skip invalid
-
-            call_ts = datetime.fromtimestamp(ts_raw / 1000)
-
-            call = CallHistory(
-                user_id=user_id,
-                phone_number=item.get("number", ""),
-                formatted_number=item.get("formatted_number", ""),
-                call_type=item.get("call_type", "unknown"),
-                timestamp=call_ts,
-                duration=item.get("duration", 0),
-                contact_name=item.get("name", ""),
-                sync_timestamp=sync_dt
-            )
-            db.session.add(call)
-            saved += 1
-
-        # Save metrics summary
-        metrics = data.get("metrics")
-        if metrics:
-            metrics_rec = CallMetrics(
-                user_id=user_id,
-                total_calls=metrics.get("total_calls", 0),
-                incoming_calls=metrics.get("incoming_calls", 0),
-                outgoing_calls=metrics.get("outgoing_calls", 0),
-                missed_calls=metrics.get("missed_calls", 0),
-                rejected_calls=metrics.get("rejected_calls", 0),
-                total_duration=metrics.get("total_duration", 0),
-                period_days=data.get("period_days", 0),
-                sync_timestamp=sync_dt
-            )
-            db.session.add(metrics_rec)
-
-        db.session.commit()
-
-        return jsonify({"message": "Call history synced successfully", "calls_saved": saved}), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-
-# ---------------------------
-#   ADMIN — USER ANALYTICS
-# ---------------------------
-
-@analytics_bp.route('/api/admin/user-analytics/<int:user_id>', methods=['GET'])
-@jwt_required()
-def get_user_analytics(user_id):
     try:
         days = request.args.get("days", 30, type=int)
         from_date = datetime.utcnow() - timedelta(days=days)
 
-        analytics = UserAnalytics.query.filter_by(user_id=user_id) \
-            .filter(UserAnalytics.created_at >= from_date).order_by(UserAnalytics.created_at.desc()).all()
+        query = CallHistory.query.filter(
+            CallHistory.user_id == user_id,
+            CallHistory.created_at >= from_date
+        ).order_by(CallHistory.created_at.desc())
 
-        output = [{
-            "id": a.id,
-            "total_calls": a.total_calls,
-            "incoming_calls": a.incoming_calls,
-            "outgoing_calls": a.outgoing_calls,
-            "missed_calls": a.missed_calls,
-            "rejected_calls": a.rejected_calls,
-            "total_duration": a.total_duration,
-            "sync_timestamp": a.sync_timestamp.isoformat()
-        } for a in analytics]
+        def serialize(c):
+            return {
+                "id": c.id,
+                "number": c.phone_number,
+                "name": c.contact_name,
+                "duration": c.duration,
+                "call_type": c.call_type,
+                "timestamp": iso(c.timestamp),
+                "created_at": iso(c.created_at),
+            }
+
+        paginated = paginate(query, serialize)
+
+        # summary
+        total_calls = db.session.query(func.count(CallHistory.id)).filter_by(user_id=user_id).scalar() or 0
+        total_duration = db.session.query(func.sum(CallHistory.duration)).filter_by(user_id=user_id).scalar() or 0
 
         return jsonify({
             "user_id": user_id,
-            "analytics": output,
+            "performance": user.performance_score,
+            "analytics": paginated["items"],
+            "meta": paginated["meta"],
             "summary": {
-                "records": len(output),
-                "total_calls": sum(i["total_calls"] for i in output),
-                "total_duration": sum(i["total_duration"] for i in output)
+                "total_calls": total_calls,
+                "total_duration": total_duration
             }
         })
 
@@ -221,35 +224,39 @@ def get_user_analytics(user_id):
         return jsonify({"error": str(e)}), 500
 
 
-# ---------------------------
-#   USER MY ANALYTICS
-# ---------------------------
-
-@analytics_bp.route('/api/user/my-analytics', methods=['GET'])
+# ------------------------------------------------
+# 4️⃣ USER — MY ANALYTICS (SECURE)
+# ------------------------------------------------
+@analytics_bp.route("/api/user/my-analytics", methods=["GET"])
 @jwt_required()
-def get_my_analytics():
+def my_analytics():
     try:
         user_id = get_jwt_identity()
         days = request.args.get("days", 30, type=int)
         from_date = datetime.utcnow() - timedelta(days=days)
 
-        analytics = UserAnalytics.query.filter_by(user_id=user_id) \
-            .filter(UserAnalytics.created_at >= from_date).all()
+        query = CallHistory.query.filter(
+            CallHistory.user_id == user_id,
+            CallHistory.created_at >= from_date
+        ).order_by(CallHistory.created_at.desc())
 
-        output = [{
-            "total_calls": a.total_calls,
-            "incoming_calls": a.incoming_calls,
-            "outgoing_calls": a.outgoing_calls,
-            "missed_calls": a.missed_calls,
-            "rejected_calls": a.rejected_calls,
-            "total_duration": a.total_duration,
-            "sync_timestamp": a.sync_timestamp.isoformat()
-        } for a in analytics]
+        def serialize(c):
+            return {
+                "id": c.id,
+                "number": c.phone_number,
+                "name": c.contact_name,
+                "duration": c.duration,
+                "call_type": c.call_type,
+                "timestamp": iso(c.timestamp)
+            }
+
+        paginated = paginate(query, serialize)
 
         return jsonify({
             "user_id": user_id,
-            "data": output,
-            "total_records": len(output)
+            "performance": User.query.get(user_id).performance_score,
+            "data": paginated["items"],
+            "meta": paginated["meta"]
         })
 
     except Exception as e:
