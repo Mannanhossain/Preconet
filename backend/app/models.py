@@ -10,8 +10,9 @@ db = SQLAlchemy()
 bcrypt = Bcrypt()
 
 # =========================================================
-# ENUM ROLE
+# ENUM: User Roles
 # =========================================================
+
 class UserRole(enum.Enum):
     SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
@@ -21,6 +22,7 @@ class UserRole(enum.Enum):
 # =========================================================
 # CUSTOM JSON TYPE (SQLite Compatible)
 # =========================================================
+
 class JSONType(Text):
     def process_bind_param(self, value, dialect):
         return json.dumps(value) if value is not None else None
@@ -38,8 +40,9 @@ def JSONAuto():
 
 
 # =========================================================
-# SUPER ADMIN MODEL
+# SUPER ADMIN
 # =========================================================
+
 class SuperAdmin(db.Model):
     __tablename__ = "super_admins"
 
@@ -50,7 +53,6 @@ class SuperAdmin(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # PASSWORD HANDLERS
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
 
@@ -61,6 +63,7 @@ class SuperAdmin(db.Model):
 # =========================================================
 # ADMIN MODEL
 # =========================================================
+
 class Admin(db.Model):
     __tablename__ = "admins"
 
@@ -70,6 +73,7 @@ class Admin(db.Model):
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
+    # Subscription features
     user_limit = db.Column(db.Integer, default=10)
     expiry_date = db.Column(db.DateTime, nullable=False)
 
@@ -80,7 +84,6 @@ class Admin(db.Model):
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
 
-    # ADMIN → USERS
     users = db.relationship(
         "User",
         backref="admin",
@@ -88,7 +91,6 @@ class Admin(db.Model):
         lazy=True
     )
 
-    # PASSWORD HANDLERS
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
 
@@ -102,6 +104,7 @@ class Admin(db.Model):
 # =========================================================
 # USER MODEL
 # =========================================================
+
 class User(db.Model):
     __tablename__ = "users"
 
@@ -112,7 +115,6 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
 
     phone = db.Column(db.String(20))
-
     admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False)
 
     is_active = db.Column(db.Boolean, default=True)
@@ -122,7 +124,7 @@ class User(db.Model):
     last_login = db.Column(db.DateTime)
     last_sync = db.Column(db.DateTime)
 
-    # PASSWORD HANDLERS
+    # PASSWORD HELPERS
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
 
@@ -133,6 +135,7 @@ class User(db.Model):
         self.last_sync = datetime.utcnow()
 
     def get_sync_summary(self):
+        from .models import CallHistory, Attendance
         return {
             "last_sync": self.last_sync.isoformat() if self.last_sync else None,
             "call_records": CallHistory.query.filter_by(user_id=self.id).count(),
@@ -141,12 +144,19 @@ class User(db.Model):
 
 
 # =========================================================
-# ATTENDANCE MODEL
+# ATTENDANCE MODEL (Safe Version)
 # =========================================================
+# NOTE:
+#   - We keep id = String PK to avoid breaking existing DB.
+#   - "external_id" is added (UUID from client).
+#   - Compatible with your Option 1 migration.
+
 class Attendance(db.Model):
     __tablename__ = "attendances"
 
-    id = db.Column(db.String(64), primary_key=True)  # UUID from Flutter
+    id = db.Column(db.String(64), primary_key=True)   # DO NOT CHANGE (safe)
+    external_id = db.Column(db.String(64), index=True)  # added for future migration
+
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     check_in = db.Column(db.DateTime, nullable=False)
@@ -157,7 +167,7 @@ class Attendance(db.Model):
     address = db.Column(db.String(500))
 
     image_path = db.Column(db.String(1024))
-    status = db.Column(db.String(50), default="present")
+    status = db.Column(db.String(50), default="present", index=True)
 
     synced = db.Column(db.Boolean, default=False)
     sync_timestamp = db.Column(db.DateTime)
@@ -169,6 +179,7 @@ class Attendance(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
+            "external_id": self.external_id,
             "user_id": self.user_id,
             "check_in": self.check_in.isoformat(),
             "check_out": self.check_out.isoformat() if self.check_out else None,
@@ -179,13 +190,14 @@ class Attendance(db.Model):
             "status": self.status,
             "synced": self.synced,
             "sync_timestamp": self.sync_timestamp.isoformat() if self.sync_timestamp else None,
-            "created_at": self.created_at.isoformat(),
+            "created_at": self.created_at.isoformat()
         }
 
 
 # =========================================================
-# CALL HISTORY MODEL
+# CALL HISTORY MODEL (Safe Version)
 # =========================================================
+
 class CallHistory(db.Model):
     __tablename__ = "call_history"
 
@@ -193,8 +205,10 @@ class CallHistory(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     number = db.Column(db.String(50))
-    call_type = db.Column(db.String(20))        # incoming/outgoing/missed/rejected
-    timestamp = db.Column(db.BigInteger)        # Epoch milliseconds
+    formatted_number = db.Column(db.String(100))
+    call_type = db.Column(db.String(20))     # incoming/outgoing/missed/rejected
+
+    timestamp = db.Column(db.DateTime)       # Converted from BigInt → DateTime
     duration = db.Column(db.Integer)
     name = db.Column(db.String(150))
 
@@ -207,17 +221,19 @@ class CallHistory(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "number": self.number,
+            "formatted_number": self.formatted_number,
             "call_type": self.call_type,
-            "timestamp": self.timestamp,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "duration": self.duration,
             "name": self.name,
-            "created_at": self.created_at.isoformat(),
+            "created_at": self.created_at.isoformat()
         }
 
 
 # =========================================================
 # ACTIVITY LOG MODEL
 # =========================================================
+
 class ActivityLog(db.Model):
     __tablename__ = "activity_logs"
 
