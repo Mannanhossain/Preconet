@@ -1,262 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Call Manager Pro - Admin Panel</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel - Call Manager Pro</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Chart.js -->
+    <!-- Chart.js required for Dashboard -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        .hidden-section {
-            display: none;
-        }
-
-        .active-menu {
-            background: #e0f2fe;
-            border-right: 4px solid #0284c7;
-        }
+        .hidden-section { display: none; }
+        .active-menu { background: #e0f2fe; border-right: 4px solid #0284c7; }
     </style>
 </head>
 
 <body class="bg-gray-100">
 
-    <div class="flex h-screen">
+<div class="flex h-screen">
 
-        <!-- =================== SIDEBAR =================== -->
-        <aside class="w-64 bg-white shadow-lg flex flex-col">
-            <div class="p-6 border-b border-gray-200">
-                <h1 class="text-xl font-bold text-gray-800">Admin Panel</h1>
-                <p class="text-sm text-gray-500">Call Manager Pro</p>
-            </div>
-
-            <nav class="flex-1 p-4 space-y-2">
-                <a id="menuDashboard" class="menu-item active-menu flex items-center space-x-3 p-3 rounded cursor-pointer">
-                    <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
-                </a>
-                <a id="menuUsers" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
-                    <i class="fas fa-users"></i> <span>Users</span>
-                </a>
-                <a id="menuCreateUser" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
-                    <i class="fas fa-user-plus"></i> <span>Create User</span>
-                </a>
-                <a id="menuAttendance" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
-                    <i class="fas fa-calendar-check"></i> <span>Attendance</span>
-                </a>
-                <a id="menuCallHistory" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
-                    <i class="fas fa-phone-alt"></i> <span>Call History</span>
-                </a>
-                <a id="menuPerformance" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
-                    <i class="fas fa-chart-line"></i> <span>Performance</span>
-                </a>
-            </nav>
-
-            <button id="logoutBtn" class="m-4 bg-red-600 text-white p-2 rounded text-center">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </button>
-        </aside>
-
-        <!-- =================== MAIN CONTENT =================== -->
-        <main class="flex-1 overflow-auto p-6">
-
-            <!-- DASHBOARD -->
-            <section id="sectionDashboard">
-                <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
-
-                <div id="stats-cards" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"></div>
-
-                <div class="mb-6">
-                    <h3 class="text-lg font-semibold mb-3">Recent Sync Activity</h3>
-                    <div id="recent-sync-list" class="space-y-2"></div>
-                </div>
-
-                <div class="mb-6">
-                    <h3 class="text-lg font-semibold mb-3">User Activity Logs</h3>
-                    <div id="user-logs-container" class="space-y-2"></div>
-                </div>
-
-                <div class="mt-6">
-                    <h3 class="text-lg font-semibold mb-3">Performance Trend</h3>
-                    <canvas id="performanceChart" height="120"></canvas>
-                </div>
-            </section>
-
-            <!-- USERS -->
-            <section id="sectionUsers" class="hidden-section">
-                <h2 class="text-2xl font-bold mb-4">Users</h2>
-
-                <table class="w-full bg-white rounded shadow overflow-hidden">
-                    <thead class="bg-gray-200 text-left">
-                        <tr>
-                            <th class="p-3">User</th>
-                            <th class="p-3">Phone</th>
-                            <th class="p-3">Performance</th>
-                            <th class="p-3">Status</th>
-                            <th class="p-3 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTableBody"></tbody>
-                </table>
-            </section>
-
-            <!-- CREATE USER -->
-            <section id="sectionCreateUser" class="hidden-section">
-                <h2 class="text-2xl font-bold mb-4">Create User</h2>
-
-                <form id="createUserForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded shadow">
-                    <div class="md:col-span-2">
-                        <label class="block text-sm mb-1">Full Name</label>
-                        <input id="userName" class="border p-2 w-full rounded" required />
-                    </div>
-
-                    <div>
-                        <label class="block text-sm mb-1">Email</label>
-                        <input id="userEmail" type="email" class="border p-2 w-full rounded" required />
-                    </div>
-
-                    <div>
-                        <label class="block text-sm mb-1">Phone</label>
-                        <input id="userPhone" class="border p-2 w-full rounded" />
-                    </div>
-
-                    <div class="md:col-span-2">
-                        <label class="block text-sm mb-1">Password</label>
-                        <input id="userPassword" type="password" class="border p-2 w-full rounded" required />
-                    </div>
-
-                    <button type="submit" class="md:col-span-2 bg-blue-600 text-white py-2 rounded">Create User</button>
-                </form>
-            </section>
-
-            <!-- ATTENDANCE -->
-            <section id="sectionAttendance" class="hidden-section">
-                <h2 class="text-2xl font-bold mb-4">Attendance</h2>
-
-                <table class="w-full bg-white rounded shadow">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="p-3">User</th>
-                            <th class="p-3">Check In</th>
-                            <th class="p-3">Check Out</th>
-                            <th class="p-3">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendanceTableBody"></tbody>
-                </table>
-            </section>
-
-            <!-- CALL HISTORY -->
-            <section id="sectionCallHistory" class="hidden-section">
-                <h2 class="text-2xl font-bold mb-4">Call History</h2>
-
-                <div id="call-history-container" class="bg-white p-4 rounded shadow"></div>
-            </section>
-
-            <!-- PERFORMANCE -->
-            <section id="sectionPerformance" class="hidden-section">
-                <h2 class="text-2xl font-bold mb-4">Performance</h2>
-                <canvas id="performanceBarCanvas" height="140"></canvas>
-            </section>
-
-        </main>
-    </div>
-
-    <!-- USER MODAL -->
-    <div id="userDataModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-        <div class="bg-white p-6 rounded w-96 shadow-lg">
-            <h3 id="modalUserTitle" class="text-xl font-bold mb-3">User Data</h3>
-            <div id="modalUserBody" class="text-sm max-h-96 overflow-auto"></div>
-            <button onclick="document.getElementById('userDataModal').classList.add('hidden')"
-                class="mt-4 w-full bg-blue-600 text-white p-2 rounded">Close</button>
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-white shadow-lg flex flex-col">
+        <div class="p-6 border-b border-gray-200">
+            <h1 class="text-xl font-bold text-gray-800">Admin Panel</h1>
+            <p class="text-sm text-gray-500">Call Manager Pro</p>
         </div>
-    </div>
 
-    <!-- ================== JS FILES ================== -->
-    <script src="/admin/js/auth.js"></script>
-    <script src="/admin/js/dashboard.js"></script>
-    <script src="/admin/js/users.js"></script>
-    <script src="/admin/js/attendance.js"></script>
-    <script src="/admin/js/call_history.js"></script>
-    <script src="/admin/js/performance.js"></script>
-    <script src="/admin/js/call_analytics.js"></script>
+        <nav class="flex-1 p-4 space-y-2">
+            <a id="menuDashboard" class="menu-item active-menu flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
+            </a>
+            <a id="menuUsers" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-users"></i> <span>Users</span>
+            </a>
+            <a id="menuCreateUser" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-user-plus"></i> <span>Create User</span>
+            </a>
+            <a id="menuAttendance" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-calendar-check"></i> <span>Attendance</span>
+            </a>
+            <a id="menuCallHistory" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-phone-alt"></i> <span>Call History</span>
+            </a>
+            <a id="menuPerformance" class="menu-item flex items-center space-x-3 p-3 rounded cursor-pointer">
+                <i class="fas fa-chart-line"></i> <span>Performance</span>
+            </a>
+        </nav>
 
-    <!-- ================== MAIN SCRIPT ================== -->
-    <script>
-        const dashboard = new DashboardManager();
-        const usersManager = new UsersManager();
-        const attendanceManager = new AttendanceManager();
-        const callHistoryManager = new CallHistoryManager();
-        const performanceManager = new PerformanceManager();
-        const callAnalyticsManager = new CallAnalyticsManager();
+        <button id="logoutBtn"
+                class="m-4 bg-red-600 text-white p-2 rounded text-center">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+    </aside>
 
-        const sections = {
-            dashboard: document.getElementById("sectionDashboard"),
-            users: document.getElementById("sectionUsers"),
-            createUser: document.getElementById("sectionCreateUser"),
-            attendance: document.getElementById("sectionAttendance"),
-            callHistory: document.getElementById("sectionCallHistory"),
-            performance: document.getElementById("sectionPerformance"),
-        };
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 overflow-auto p-6">
 
-        function hideAll() {
-            Object.values(sections).forEach(sec => sec.classList.add("hidden-section"));
-            document.querySelectorAll(".menu-item").forEach(m => m.classList.remove("active-menu"));
-        }
+        <!-- =================== DASHBOARD =================== -->
+        <section id="sectionDashboard">
+            <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
 
-        menuDashboard.onclick = () => {
-            hideAll();
-            sections.dashboard.classList.remove("hidden-section");
-            menuDashboard.classList.add("active-menu");
-            dashboard.init();
-        };
+            <!-- Stats -->
+            <div id="stats-cards"
+                 class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"></div>
 
-        menuUsers.onclick = () => {
-            hideAll();
-            sections.users.classList.remove("hidden-section");
-            menuUsers.classList.add("active-menu");
-            usersManager.loadUsers();
-        };
+            <!-- Recent Sync -->
+            <h3 class="text-lg font-semibold mb-2">Recent Sync Activity</h3>
+            <div id="recent-sync-list" class="space-y-2 mb-6"></div>
 
-        menuCreateUser.onclick = () => {
-            hideAll();
-            sections.createUser.classList.remove("hidden-section");
-            menuCreateUser.classList.add("active-menu");
-        };
+            <!-- User Logs -->
+            <h3 class="text-lg font-semibold mb-2">Recent User Actions</h3>
+            <div id="user-logs-container" class="space-y-2 mb-6"></div>
 
-        menuAttendance.onclick = () => {
-            hideAll();
-            sections.attendance.classList.remove("hidden-section");
-            menuAttendance.classList.add("active-menu");
-            attendanceManager.loadAttendance();
-        };
+            <!-- Performance Chart -->
+            <h3 class="text-lg font-semibold">Performance Trend</h3>
+            <canvas id="performanceChart" height="120"></canvas>
+        </section>
 
-        menuCallHistory.onclick = () => {
-            hideAll();
-            sections.callHistory.classList.remove("hidden-section");
-            menuCallHistory.classList.add("active-menu");
-            callHistoryManager.loadCalls();
-        };
+        <!-- =================== USERS =================== -->
+        <section id="sectionUsers" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Users</h2>
+            <table class="w-full bg-white rounded shadow overflow-hidden">
+                <thead class="bg-gray-200 text-left">
+                <tr>
+                    <th class="p-3">User</th>
+                    <th class="p-3">Phone</th>
+                    <th class="p-3">Performance</th>
+                    <th class="p-3">Status</th>
+                    <th class="p-3 text-right">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="users-table-body"></tbody>
+            </table>
+        </section>
 
-        menuPerformance.onclick = () => {
-            hideAll();
-            sections.performance.classList.remove("hidden-section");
-            menuPerformance.classList.add("active-menu");
-            performanceManager.loadPerformance();
-        };
+        <!-- =================== CREATE USER =================== -->
+        <section id="sectionCreateUser" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Create User</h2>
 
-        logoutBtn.onclick = () => auth.logout();
+            <form id="createUserForm"
+                  class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded shadow">
+                <div class="md:col-span-2">
+                    <label class="text-sm">Full Name</label>
+                    <input id="userName" class="border p-2 w-full rounded" required/>
+                </div>
+                <div>
+                    <label class="text-sm">Email</label>
+                    <input id="userEmail" type="email" class="border p-2 w-full rounded" required/>
+                </div>
+                <div>
+                    <label class="text-sm">Phone</label>
+                    <input id="userPhone" class="border p-2 w-full rounded"/>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-sm">Password</label>
+                    <input id="userPassword" type="password" class="border p-2 w-full rounded" required/>
+                </div>
 
-        document.addEventListener("DOMContentLoaded", () => {
-            dashboard.init();
-        });
-    </script>
+                <button class="md:col-span-2 bg-blue-600 text-white py-2 rounded">
+                    Create User
+                </button>
+            </form>
+        </section>
+
+        <!-- =================== ATTENDANCE =================== -->
+        <section id="sectionAttendance" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Attendance</h2>
+            <table class="w-full bg-white rounded shadow">
+                <thead class="bg-gray-200">
+                <tr>
+                    <th class="p-3">User</th>
+                    <th class="p-3">Check In</th>
+                    <th class="p-3">Check Out</th>
+                    <th class="p-3">Status</th>
+                </tr>
+                </thead>
+                <tbody id="attendance-table-body"></tbody>
+            </table>
+        </section>
+
+        <!-- =================== CALL HISTORY =================== -->
+        <section id="sectionCallHistory" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Call History</h2>
+            <div id="call-history-container" class="bg-white p-4 rounded shadow"></div>
+        </section>
+
+        <!-- =================== PERFORMANCE =================== -->
+        <section id="sectionPerformance" class="hidden-section">
+            <h2 class="text-2xl font-bold mb-4">Performance</h2>
+            <canvas id="performanceBarCanvas" height="100"></canvas>
+        </section>
+
+    </main>
+</div>
+
+<!-- =================== JS =================== -->
+<script src="/admin/js/auth.js"></script>
+<script src="/admin/js/dashboard.js"></script>
+<script src="/admin/js/users.js"></script>
+<script src="/admin/js/attendance.js"></script>
+<script src="/admin/js/call_history.js"></script>
+<script src="/admin/js/performance.js"></script>
+
+<script>
+    // GLOBAL INSTANCES
+    const dashboard = new DashboardManager();
+    const usersManager = new UsersManager();
+    const attendanceManager = new AttendanceManager();
+    const callHistoryManager = new CallHistoryManager();
+    const performanceManager = new PerformanceManager();
+
+    const sections = {
+        dashboard: sectionDashboard,
+        users: sectionUsers,
+        createUser: sectionCreateUser,
+        attendance: sectionAttendance,
+        callHistory: sectionCallHistory,
+        performance: sectionPerformance,
+    };
+
+    // Hide all sections
+    function hideAll() {
+        Object.values(sections).forEach(sec => sec.classList.add("hidden-section"));
+        document.querySelectorAll(".menu-item").forEach(m => m.classList.remove("active-menu"));
+    }
+
+    // Menu handlers
+    menuDashboard.onclick = () => {
+        hideAll();
+        sectionDashboard.classList.remove("hidden-section");
+        menuDashboard.classList.add("active-menu");
+        dashboard.init();
+    };
+
+    menuUsers.onclick = () => {
+        hideAll();
+        sectionUsers.classList.remove("hidden-section");
+        menuUsers.classList.add("active-menu");
+        usersManager.loadUsers();
+    };
+
+    menuCreateUser.onclick = () => {
+        hideAll();
+        sectionCreateUser.classList.remove("hidden-section");
+        menuCreateUser.classList.add("active-menu");
+    };
+
+    menuAttendance.onclick = () => {
+        hideAll();
+        sectionAttendance.classList.remove("hidden-section");
+        menuAttendance.classList.add("active-menu");
+        attendanceManager.loadAttendance();
+    };
+
+    menuCallHistory.onclick = () => {
+        hideAll();
+        sectionCallHistory.classList.remove("hidden-section");
+        menuCallHistory.classList.add("active-menu");
+        callHistoryManager.loadCalls();
+    };
+
+    menuPerformance.onclick = () => {
+        hideAll();
+        sectionPerformance.classList.remove("hidden-section");
+        menuPerformance.classList.add("active-menu");
+        performanceManager.loadPerformance();
+    };
+
+    logoutBtn.onclick = () => auth.logout();
+
+    // Auto load dashboard
+    document.addEventListener("DOMContentLoaded", () => dashboard.init());
+</script>
 
 </body>
-
 </html>
-
