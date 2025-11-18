@@ -1,58 +1,25 @@
-/* =============================
-   PERFORMANCE CHART MANAGER
-   ============================= */
+/* admin/js/performance.js */
 class PerformanceManager {
   async loadPerformance() {
     try {
-      const resp = await auth.makeAuthenticatedRequest("/api/admin/performance");
+      const resp = await auth.makeAuthenticatedRequest('/api/admin/performance');
+      if (!resp) return;
       const data = await resp.json();
+      if (!resp.ok) { auth.showNotification(data.error || 'Perf load failed', 'error'); return; }
 
-      if (!resp.ok) {
-        auth.showNotification(data.error || "Failed to load performance analytics", "error");
-        return;
-      }
-
-      const labels = data.labels || [];
-      const values = data.values || [];
-
-      const ctx = document.getElementById("performanceBarCanvas");
-      if (!ctx) {
-        console.warn("performanceBarCanvas not found in DOM");
-        return;
-      }
-
-      if (typeof Chart === "undefined") {
-        console.error("Chart.js not loaded");
-        return;
-      }
+      const ctx = document.getElementById('performanceBarCanvas');
+      if (!ctx) return;
+      if (typeof Chart === 'undefined') return;
 
       new Chart(ctx, {
-        type: "bar",
+        type: 'bar',
         data: {
-          labels,
-          datasets: [
-            {
-              label: "Performance Score",
-              data: values,
-              backgroundColor: "#3B82F6",
-              borderColor: "#1D4ED8",
-              borderWidth: 1,
-            }
-          ]
+          labels: data.labels || [],
+          datasets: [{ label: 'Performance', data: data.values || [] }]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
+        options: { responsive:true, maintainAspectRatio:false }
       });
-
-    } catch (e) {
-      console.error("Performance Load Error:", e);
-      auth.showNotification("Performance load error", "error");
-    }
+    } catch(e) { console.error(e); auth.showNotification('Perf error', 'error'); }
   }
 }
 

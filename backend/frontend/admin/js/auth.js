@@ -1,7 +1,4 @@
-/* ================================
-   AUTH UTILITIES (ADMIN PANEL)
-================================ */
-
+/* admin/js/auth.js */
 class Auth {
     constructor() {
         this.tokenKey = "admin_token";
@@ -9,47 +6,43 @@ class Auth {
         this.roleKey = "admin_role";
     }
 
-    /* Save role + token + user */
     saveLogin(role, token, user) {
-        sessionStorage.setItem(this.roleKey, role);
-        sessionStorage.setItem(this.tokenKey, token);
-        sessionStorage.setItem(this.userKey, JSON.stringify(user));
+        if (role && token && user) {
+            sessionStorage.setItem(this.roleKey, role);
+            sessionStorage.setItem(this.tokenKey, token);
+            sessionStorage.setItem(this.userKey, JSON.stringify(user));
+        } else if (token && user) {
+            // allow older call-signature: saveLogin(token, user)
+            sessionStorage.setItem(this.tokenKey, token);
+            sessionStorage.setItem(this.userKey, JSON.stringify(user));
+        }
     }
 
-    /* Get token */
     getToken() {
         return sessionStorage.getItem(this.tokenKey);
     }
 
-    /* Get logged in admin */
     getCurrentUser() {
         const raw = sessionStorage.getItem(this.userKey);
         return raw ? JSON.parse(raw) : null;
     }
 
-    /* Logout + redirect to login */
     logout() {
         sessionStorage.removeItem(this.roleKey);
         sessionStorage.removeItem(this.tokenKey);
         sessionStorage.removeItem(this.userKey);
-
-        // ALWAYS redirect to admin login page
         window.location.href = "/admin/login.html";
     }
 
-    /* Authenticated API request */
     async makeAuthenticatedRequest(url, options = {}) {
         const token = this.getToken();
-
         if (!token) {
             this.logout();
             return;
         }
 
-        // Ensure the URL begins with /api
-        const fullUrl = url.startsWith("/api")
-            ? url
-            : `/api${url}`;
+        // ensure full API path
+        const fullUrl = url.startsWith("/api") ? url : `/api${url.startsWith("/") ? url : "/" + url}`;
 
         const headers = {
             "Content-Type": "application/json",
@@ -59,7 +52,6 @@ class Auth {
 
         const resp = await fetch(fullUrl, { ...options, headers });
 
-        // Auto logout on expired or invalid token
         if (resp.status === 401) {
             this.showNotification("Session expired — please login again", "error");
             this.logout();
@@ -68,10 +60,8 @@ class Auth {
         return resp;
     }
 
-    /* Notification System */
     showNotification(message, type = "info") {
         let area = document.getElementById("notificationArea");
-
         if (!area) {
             area = document.createElement("div");
             area.id = "notificationArea";
@@ -87,17 +77,8 @@ class Auth {
         };
 
         const div = document.createElement("div");
-        div.className = `
-            text-white px-4 py-2 rounded shadow transition
-            ${palette[type] || palette.info}
-        `;
-        div.innerHTML = `
-            <div class="flex items-center gap-3">
-                <i class="fas fa-info-circle"></i>
-                <span>${message}</span>
-            </div>
-        `;
-
+        div.className = `text-white px-4 py-2 rounded shadow transition ${palette[type] || palette.info}`;
+        div.innerHTML = `<div class="flex items-center gap-3"><i class="fas fa-info-circle"></i><span>${message}</span></div>`;
         area.appendChild(div);
 
         setTimeout(() => {
@@ -107,5 +88,4 @@ class Auth {
     }
 }
 
-/* Global instance */
 const auth = new Auth();

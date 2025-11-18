@@ -1,122 +1,38 @@
-// =========================
-// SAFE ELEMENT HELPER
-// =========================
-function el(id) {
-    return document.getElementById(id);
-}
+/* admin/js/admin.js */
+const dashboard = window.dashboard || new (function(){})();
+const usersManager = window.usersManager || new (function(){})();
+const attendanceManager = window.attendanceManager || new (function(){})();
+const callHistoryManager = window.callHistoryManager || new (function(){})();
+const callAnalyticsManager = window.callAnalyticsManager || new (function(){})();
+const performanceManager = window.performanceManager || new (function(){})();
 
-// =========================
-// AUTH CHECK
-// =========================
-if (!auth.getToken()) {
-    window.location.href = "/admin/login.html";
-}
+// Sidebar toggle for mobile
+document.addEventListener("DOMContentLoaded", () => {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+    const open = document.getElementById("openSidebar");
+    const close = document.getElementById("closeSidebar");
 
-// =========================
-// REQUIRED GLOBAL OBJECT CHECK
-// =========================
-if (!window.dashboard) console.warn("dashboard object missing");
-if (!window.usersManager) console.warn("usersManager missing");
-if (!window.attendanceManager) console.warn("attendanceManager missing");
-if (!window.callHistoryManager) console.warn("callHistoryManager missing");
+    if (open) open.onclick = () => { sidebar.classList.add("active"); overlay.classList.add("active"); };
+    if (close) close.onclick = () => { sidebar.classList.remove("active"); overlay.classList.remove("active"); };
+    if (overlay) overlay.onclick = () => { sidebar.classList.remove("active"); overlay.classList.remove("active"); }
 
-// =========================
-// SECTION REFERENCES
-// =========================
-const sections = {
-    dashboard: el("sectionDashboard"),
-    users: el("sectionUsers"),
-    createUser: el("sectionCreateUser"),
-    attendance: el("sectionAttendance"),
-    callHistory: el("sectionCallHistory"),
-    performance: el("sectionPerformance"),
-};
+    // Expose menu elements as globals used in index.html code
+    window.menuDashboard = document.getElementById("menuDashboard");
+    window.menuUsers = document.getElementById("menuUsers");
+    window.menuCreateUser = document.getElementById("menuCreateUser");
+    window.menuAttendance = document.getElementById("menuAttendance");
+    window.menuCallHistory = document.getElementById("menuCallHistory");
+    window.menuPerformance = document.getElementById("menuPerformance");
 
-// Hide all sections
-function hideAll() {
-    Object.values(sections).forEach(sec => {
-        if (sec) sec.classList.add("hidden");
-    });
-}
+    window.sectionDashboard = document.getElementById("sectionDashboard");
+    window.sectionUsers = document.getElementById("sectionUsers");
+    window.sectionCreateUser = document.getElementById("sectionCreateUser");
+    window.sectionAttendance = document.getElementById("sectionAttendance");
+    window.sectionCallHistory = document.getElementById("sectionCallHistory");
+    window.sectionPerformance = document.getElementById("sectionPerformance");
 
-// Activate menu item
-function activateMenu(id) {
-    document.querySelectorAll("aside nav a")
-        .forEach(a => a.classList.remove("active-menu"));
+    window.logoutBtn = document.getElementById("logoutBtn");
 
-    const menu = el(id);
-    if (menu) menu.classList.add("active-menu");
-}
-
-// =========================
-// MENU HANDLERS (SAFE)
-// =========================
-if (el("menuDashboard")) {
-    el("menuDashboard").onclick = () => {
-        hideAll();
-        sections.dashboard?.classList.remove("hidden");
-        activateMenu("menuDashboard");
-        dashboard?.loadStats();
-    };
-}
-
-if (el("menuUsers")) {
-    el("menuUsers").onclick = () => {
-        hideAll();
-        sections.users?.classList.remove("hidden");
-        activateMenu("menuUsers");
-        usersManager?.loadUsers();
-    };
-}
-
-if (el("menuCreateUser")) {
-    el("menuCreateUser").onclick = () => {
-        hideAll();
-        sections.createUser?.classList.remove("hidden");
-        activateMenu("menuCreateUser");
-    };
-}
-
-if (el("menuAttendance")) {
-    el("menuAttendance").onclick = () => {
-        hideAll();
-        sections.attendance?.classList.remove("hidden");
-        activateMenu("menuAttendance");
-        attendanceManager?.loadAttendance();
-    };
-}
-
-if (el("menuCallHistory")) {
-    el("menuCallHistory").onclick = () => {
-        hideAll();
-        sections.callHistory?.classList.remove("hidden");
-        activateMenu("menuCallHistory");
-        callHistoryManager?.loadCallHistory();
-    };
-}
-
-if (el("menuPerformance")) {
-    el("menuPerformance").onclick = () => {
-        hideAll();
-        sections.performance?.classList.remove("hidden");
-        activateMenu("menuPerformance");
-        dashboard?.renderPerformanceChart();
-    };
-}
-
-// =========================
-// LOGOUT
-// =========================
-if (el("logoutBtn")) {
-    el("logoutBtn").onclick = () => {
-        auth.logout();
-    };
-}
-
-// =========================
-// ON PAGE LOAD
-// =========================
-hideAll();
-sections.dashboard?.classList.remove("hidden");
-dashboard?.loadStats();
-activateMenu("menuDashboard");
+    // If managers were created after this script loaded, they will be used by index logic (index.html expects global vars).
+});
