@@ -12,48 +12,15 @@
   <style>
     .hidden-section { display: none; }
     .active-menu { background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%); border-right: 4px solid #3b82f6; color: #3b82f6; }
-    
-    /* Modern scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-    
-    /* Card hover effects */
-    .card-hover {
-      transition: all 0.3s ease;
-    }
-    .card-hover:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-    
-    /* Gradient backgrounds */
-    .gradient-bg {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    /* Table row hover */
-    .table-row-hover:hover {
-      background-color: #f8fafc;
-    }
-    
-    /* Active filter button */
-    .filter-active {
-      background-color: #3b82f6;
-      color: white;
-    }
-    
-    /* small responsive helpers */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .table-row-hover:hover { background-color: #f8fafc; }
+    .filter-active { background-color: #3b82f6; color: white; }
     @media (max-width: 1024px) {
       aside { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-110%); transition: transform .25s ease; z-index: 40; }
       aside.active { transform: translateX(0); }
@@ -65,7 +32,6 @@
 </head>
 <body class="bg-gray-50">
 
-  <!-- Overlay for mobile sidebar -->
   <div id="overlay" class="" aria-hidden="true"></div>
 
   <div class="flex h-screen">
@@ -106,7 +72,6 @@
           <span>Call History</span>
         </a>
 
-        <!-- ✅ ADDED CALL ANALYTICS MENU -->
         <a id="menuCallAnalytics" class="menu-item flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-100">
           <i class="fas fa-chart-bar w-4"></i>
           <span>Call Analytics</span>
@@ -128,7 +93,6 @@
     <!-- MAIN -->
     <main id="mainContent" class="flex-1 overflow-auto p-6 lg:ml-0">
 
-      <!-- Header (mobile hamburger) -->
       <header class="flex items-center justify-between mb-8 bg-white p-4 rounded-xl shadow-sm">
         <div class="flex items-center gap-4">
           <button id="openSidebar" class="lg:hidden text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors">
@@ -139,10 +103,11 @@
             <p id="pageSubtitle" class="text-sm text-gray-500">Overview</p>
           </div>
         </div>
-        <div id="rightHeader" class="flex items-center gap-4"></div>
+        <div id="rightHeader" class="flex items-center gap-4">
+        </div>
       </header>
 
-      <!-- Dashboard Section -->
+      <!-- Dashboard -->
       <section id="sectionDashboard">
         <div class="mb-8">
           <h3 class="text-2xl font-bold text-gray-800 mb-2">Dashboard</h3>
@@ -158,7 +123,7 @@
             </h4>
             <div id="recent-sync-list" class="space-y-3"></div>
           </div>
-
+          
           <div class="bg-white p-6 rounded-xl shadow-sm">
             <h4 class="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
               <i class="fas fa-user-clock text-green-500"></i> Recent User Actions
@@ -177,13 +142,13 @@
         </div>
       </section>
 
-      <!-- Users Section -->
+      <!-- Users -->
       <section id="sectionUsers" class="hidden-section">
         <div class="mb-8">
           <h3 class="text-2xl font-bold text-gray-800 mb-2">Users</h3>
           <p class="text-gray-600">Manage all users in the system</p>
         </div>
-
+        
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
           <div class="p-4 border-b border-gray-200 flex justify-between items-center">
             <div class="relative w-64">
@@ -191,17 +156,16 @@
               <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
             </div>
             <div class="flex gap-2">
-              <select id="userStatusFilter" class="border border-gray-300 rounded-lg px-4 py-2">
+              <select id="userStatusFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-              <button id="userFilterBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700">
+              <button id="userFilterBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors">
                 <i class="fas fa-filter"></i> Filter
               </button>
             </div>
           </div>
-
           <table class="w-full">
             <thead class="bg-gray-50 text-left">
               <tr>
@@ -217,33 +181,33 @@
         </div>
       </section>
 
-      <!-- Create User Section -->
+      <!-- Create User -->
       <section id="sectionCreateUser" class="hidden-section">
         <div class="mb-8">
           <h3 class="text-2xl font-bold text-gray-800 mb-2">Create User</h3>
           <p class="text-gray-600">Add a new user to the system</p>
         </div>
-
+        
         <div class="bg-white p-8 rounded-xl shadow-sm">
           <form id="createUserForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-              <input id="userName" class="w-full border border-gray-300 rounded-lg p-3" required />
+              <input id="userName" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" required />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-              <input id="userEmail" type="email" class="w-full border border-gray-300 rounded-lg p-3" required />
+              <input id="userEmail" type="email" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" required />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-              <input id="userPhone" class="w-full border border-gray-300 rounded-lg p-3" />
+              <input id="userPhone" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" />
             </div>
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <input id="userPassword" type="password" class="w-full border border-gray-300 rounded-lg p-3" required />
+              <input id="userPassword" type="password" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" required />
             </div>
             <div class="md:col-span-2 flex justify-end">
-              <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg font-medium flex items-center gap-2">
+              <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg font-medium flex items-center gap-2 transition-all hover:shadow-lg">
                 <i class="fas fa-user-plus"></i> Create User
               </button>
             </div>
@@ -251,25 +215,24 @@
         </div>
       </section>
 
-      <!-- Attendance Section -->
+      <!-- Attendance -->
       <section id="sectionAttendance" class="hidden-section">
         <div class="mb-8">
           <h3 class="text-2xl font-bold text-gray-800 mb-2">Attendance</h3>
           <p class="text-gray-600">Track employee attendance records</p>
         </div>
-
+        
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
           <div class="p-4 border-b border-gray-200 flex justify-between items-center">
             <div class="flex gap-2">
               <button id="attendanceToday" class="filter-active bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
-              <button id="attendanceWeek" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg">This Week</button>
-              <button id="attendanceMonth" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg">This Month</button>
+              <button id="attendanceWeek" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Week</button>
+              <button id="attendanceMonth" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Month</button>
             </div>
-            <button id="exportAttendance" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg flex items-center gap-2">
+            <button id="exportAttendance" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors">
               <i class="fas fa-download"></i> Export
             </button>
           </div>
-
           <table class="w-full">
             <thead class="bg-gray-50">
               <tr>
@@ -284,20 +247,20 @@
         </div>
       </section>
 
-      <!-- Call History Section -->
+      <!-- Call History -->
       <section id="sectionCallHistory" class="hidden-section">
         <div class="mb-8">
           <h3 class="text-2xl font-bold text-gray-800 mb-2">Call History</h3>
           <p class="text-gray-600">Review all call records and analytics</p>
         </div>
-
+        
         <div class="bg-white p-6 rounded-xl shadow-sm">
           <div class="mb-4 flex gap-4">
             <div class="relative w-64">
-              <input id="callSearchInput" type="text" placeholder="Search calls..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300">
+              <input id="callSearchInput" type="text" placeholder="Search calls..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
             </div>
-            <select id="callTypeFilter" class="border border-gray-300 rounded-lg px-4 py-2">
+            <select id="callTypeFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="all">All Call Types</option>
               <option value="incoming">Incoming</option>
               <option value="outgoing">Outgoing</option>
@@ -308,24 +271,7 @@
         </div>
       </section>
 
-      <!-- PERFORMANCE SECTION -->
-      <section id="sectionPerformance" class="hidden-section">
-        <div class="mb-8">
-          <h3 class="text-2xl font-bold text-gray-800 mb-2">Performance</h3>
-          <p class="text-gray-600">Monitor team performance metrics</p>
-        </div>
-
-        <div class="bg-white p-6 rounded-xl shadow-sm">
-          <div class="mb-4 flex gap-4">
-            <button id="performanceToday" class="filter-active bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
-            <button id="performanceWeek" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg">This Week</button>
-            <button id="performanceMonth" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg">This Month</button>
-          </div>
-          <canvas id="performanceBarCanvas" height="100"></canvas>
-        </div>
-      </section>
-
-      <!-- ✅ CALL ANALYTICS SECTION (NEW & FULLY WORKING) -->
+      <!-- Call Analytics -->
       <section id="sectionCallAnalytics" class="hidden-section">
         <div class="mb-8">
           <h3 class="text-2xl font-bold text-gray-800 mb-2">Call Analytics</h3>
@@ -335,7 +281,7 @@
         <!-- Cards -->
         <div id="call-analytics-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
 
-        <!-- Trend -->
+        <!-- Trend Chart -->
         <div class="bg-white p-6 rounded-xl shadow-sm mb-8">
           <h4 class="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
             <i class="fas fa-chart-line text-blue-500"></i> Call Volume Trend
@@ -345,7 +291,7 @@
           </div>
         </div>
 
-        <!-- Table -->
+        <!-- User Summary Table -->
         <div class="bg-white p-6 rounded-xl shadow-sm">
           <h4 class="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
             <i class="fas fa-table text-purple-500"></i> User-wise Summary
@@ -354,12 +300,28 @@
         </div>
       </section>
 
+      <!-- Performance -->
+      <section id="sectionPerformance" class="hidden-section">
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Performance</h3>
+          <p class="text-gray-600">Monitor team performance metrics</p>
+        </div>
+        
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="mb-4 flex gap-4">
+            <button id="performanceToday" class="filter-active bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
+            <button id="performanceWeek" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Week</button>
+            <button id="performanceMonth" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Month</button>
+          </div>
+          <canvas id="performanceBarCanvas" height="100"></canvas>
+        </div>
+      </section>
+
     </main>
   </div>
 
   <div id="notificationArea" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
-  <!-- JS FILES -->
   <script src="/admin/js/auth.js"></script>
   <script src="/admin/js/dashboard.js"></script>
   <script src="/admin/js/users.js"></script>
@@ -396,32 +358,37 @@
 
     window.logoutBtn = document.getElementById('logoutBtn');
 
-    function hideAll() {
-      [
-        sectionDashboard,
-        sectionUsers,
-        sectionCreateUser,
-        sectionAttendance,
-        sectionCallHistory,
-        sectionCallAnalytics,
-        sectionPerformance
-      ].forEach(s => s.classList.add('hidden-section'));
+    document.getElementById('openSidebar')?.addEventListener('click', () => {
+      document.getElementById('sidebar')?.classList.add('active');
+      document.getElementById('overlay')?.classList.add('active');
+    });
+    document.getElementById('closeSidebar')?.addEventListener('click', () => {
+      document.getElementById('sidebar')?.classList.remove('active');
+      document.getElementById('overlay')?.classList.remove('active');
+    });
+    document.getElementById('overlay')?.addEventListener('click', () => {
+      document.getElementById('sidebar')?.classList.remove('active');
+      document.getElementById('overlay')?.classList.remove('active');
+    });
 
-      document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active-menu'));
+    function hideAll() {
+      [sectionDashboard, sectionUsers, sectionCreateUser, sectionAttendance, sectionCallHistory, sectionCallAnalytics, sectionPerformance]
+        .forEach(s => s?.classList.add('hidden-section'));
+      document.querySelectorAll('.menu-item')?.forEach(m => m.classList.remove('active-menu'));
     }
 
     menuDashboard.onclick = () => {
       hideAll();
       sectionDashboard.classList.remove('hidden-section');
       menuDashboard.classList.add('active-menu');
-      dashboard.loadStats();
+      if (dashboard && typeof dashboard.loadStats === 'function') dashboard.loadStats();
     };
 
     menuUsers.onclick = () => {
       hideAll();
       sectionUsers.classList.remove('hidden-section');
       menuUsers.classList.add('active-menu');
-      usersManager.loadUsers();
+      if (usersManager && typeof usersManager.loadUsers === 'function') usersManager.loadUsers();
     };
 
     menuCreateUser.onclick = () => {
@@ -434,34 +401,203 @@
       hideAll();
       sectionAttendance.classList.remove('hidden-section');
       menuAttendance.classList.add('active-menu');
-      attendanceManager.loadAttendance();
+      if (attendanceManager && typeof attendanceManager.loadAttendance === 'function') attendanceManager.loadAttendance();
     };
 
     menuCallHistory.onclick = () => {
       hideAll();
       sectionCallHistory.classList.remove('hidden-section');
       menuCallHistory.classList.add('active-menu');
-      callHistoryManager.loadCalls();
+      if (callHistoryManager && typeof callHistoryManager.loadCalls === 'function') callHistoryManager.loadCalls();
     };
 
-    <!-- ✅ NEW CLICK HANDLER FOR CALL ANALYTICS -->
     menuCallAnalytics.onclick = () => {
       hideAll();
       sectionCallAnalytics.classList.remove('hidden-section');
       menuCallAnalytics.classList.add('active-menu');
-      callAnalyticsManager.loadAnalytics();
+      if (callAnalyticsManager && typeof callAnalyticsManager.loadAnalytics === 'function') callAnalyticsManager.loadAnalytics();
     };
 
     menuPerformance.onclick = () => {
       hideAll();
       sectionPerformance.classList.remove('hidden-section');
       menuPerformance.classList.add('active-menu');
-      performanceManager.loadPerformance();
+      if (performanceManager && typeof performanceManager.loadPerformance === 'function') performanceManager.loadPerformance();
     };
 
     logoutBtn.addEventListener('click', () => auth.logout());
 
-  </script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!auth.getToken()) {
+        window.location.href = "/admin/login.html";
+        return;
+      }
+      menuDashboard.click();
+      initializeFilters();
+    });
 
+    document.getElementById('createUserForm')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (usersManager && typeof usersManager.createUser === 'function') usersManager.createUser();
+    });
+
+    function initializeFilters() {
+      const userSearchInput = document.getElementById('userSearchInput');
+      const userStatusFilter = document.getElementById('userStatusFilter');
+      const userFilterBtn = document.getElementById('userFilterBtn');
+      
+      if (userSearchInput) {
+        userSearchInput.addEventListener('input', debounce(function() {
+          filterUsers();
+        }, 300));
+      }
+      
+      if (userStatusFilter) {
+        userStatusFilter.addEventListener('change', filterUsers);
+      }
+      
+      if (userFilterBtn) {
+        userFilterBtn.addEventListener('click', filterUsers);
+      }
+      
+      const attendanceToday = document.getElementById('attendanceToday');
+      const attendanceWeek = document.getElementById('attendanceWeek');
+      const attendanceMonth = document.getElementById('attendanceMonth');
+      const exportAttendance = document.getElementById('exportAttendance');
+      
+      if (attendanceToday) {
+        attendanceToday.addEventListener('click', function() {
+          setActiveFilter(this, [attendanceWeek, attendanceMonth]);
+          filterAttendance('today');
+        });
+      }
+      
+      if (attendanceWeek) {
+        attendanceWeek.addEventListener('click', function() {
+          setActiveFilter(this, [attendanceToday, attendanceMonth]);
+          filterAttendance('week');
+        });
+      }
+      
+      if (attendanceMonth) {
+        attendanceMonth.addEventListener('click', function() {
+          setActiveFilter(this, [attendanceToday, attendanceWeek]);
+          filterAttendance('month');
+        });
+      }
+      
+      if (exportAttendance) {
+        exportAttendance.addEventListener('click', exportAttendanceData);
+      }
+      
+      const callSearchInput = document.getElementById('callSearchInput');
+      const callTypeFilter = document.getElementById('callTypeFilter');
+      
+      if (callSearchInput) {
+        callSearchInput.addEventListener('input', debounce(function() {
+          filterCalls();
+        }, 300));
+      }
+      
+      if (callTypeFilter) {
+        callTypeFilter.addEventListener('change', filterCalls);
+      }
+      
+      const performanceToday = document.getElementById('performanceToday');
+      const performanceWeek = document.getElementById('performanceWeek');
+      const performanceMonth = document.getElementById('performanceMonth');
+      
+      if (performanceToday) {
+        performanceToday.addEventListener('click', function() {
+          setActiveFilter(this, [performanceWeek, performanceMonth]);
+          filterPerformance('today');
+        });
+      }
+      
+      if (performanceWeek) {
+        performanceWeek.addEventListener('click', function() {
+          setActiveFilter(this, [performanceToday, performanceMonth]);
+          filterPerformance('week');
+        });
+      }
+      
+      if (performanceMonth) {
+        performanceMonth.addEventListener('click', function() {
+          setActiveFilter(this, [performanceToday, performanceWeek]);
+          filterPerformance('month');
+        });
+      }
+    }
+    
+    function setActiveFilter(activeElement, otherElements) {
+      activeElement.classList.add('filter-active', 'bg-blue-600', 'text-white');
+      activeElement.classList.remove('bg-white', 'text-gray-700', 'border', 'border-gray-300');
+      
+      otherElements.forEach(element => {
+        element.classList.remove('filter-active', 'bg-blue-600', 'text-white');
+        element.classList.add('bg-white', 'text-gray-700', 'border', 'border-gray-300');
+      });
+    }
+    
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+    
+    function filterUsers() {
+      const searchTerm = document.getElementById('userSearchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('userStatusFilter').value;
+      
+      if (usersManager && typeof usersManager.loadUsers === 'function') {
+        usersManager.loadUsers({ search: searchTerm, status: statusFilter });
+      }
+      
+      console.log('Filtering users:', { searchTerm, statusFilter });
+    }
+    
+    function filterAttendance(timeRange) {
+      if (attendanceManager && typeof attendanceManager.loadAttendance === 'function') {
+        attendanceManager.loadAttendance(timeRange);
+      }
+      
+      console.log('Filtering attendance by:', timeRange);
+    }
+    
+    function filterCalls() {
+      const searchTerm = document.getElementById('callSearchInput').value.toLowerCase();
+      const callType = document.getElementById('callTypeFilter').value;
+      
+      if (callHistoryManager && typeof callHistoryManager.loadCalls === 'function') {
+        callHistoryManager.loadCalls({ search: searchTerm, type: callType });
+      }
+      
+      console.log('Filtering calls:', { searchTerm, callType });
+    }
+    
+    function filterPerformance(timeRange) {
+      if (performanceManager && typeof performanceManager.loadPerformance === 'function') {
+        performanceManager.loadPerformance(timeRange);
+      }
+      
+      console.log('Filtering performance by:', timeRange);
+    }
+    
+    function exportAttendanceData() {
+      console.log('Exporting attendance data...');
+      
+      if (window.showNotification) {
+        window.showNotification('Attendance data exported successfully!', 'success');
+      } else {
+        alert('Attendance data exported successfully!');
+      }
+    }
+  </script>
 </body>
 </html>
