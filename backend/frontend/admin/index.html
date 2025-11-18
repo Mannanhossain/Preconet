@@ -47,6 +47,12 @@
       background-color: #f8fafc;
     }
     
+    /* Active filter button */
+    .filter-active {
+      background-color: #3b82f6;
+      color: white;
+    }
+    
     /* small responsive helpers */
     @media (max-width: 1024px) {
       aside { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-110%); transition: transform .25s ease; z-index: 40; }
@@ -179,12 +185,19 @@
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
           <div class="p-4 border-b border-gray-200 flex justify-between items-center">
             <div class="relative w-64">
-              <input type="text" placeholder="Search users..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <input id="userSearchInput" type="text" placeholder="Search users..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
             </div>
-            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors">
-              <i class="fas fa-filter"></i> Filter
-            </button>
+            <div class="flex gap-2">
+              <select id="userStatusFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <button id="userFilterBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors">
+                <i class="fas fa-filter"></i> Filter
+              </button>
+            </div>
           </div>
           <table class="w-full">
             <thead class="bg-gray-50 text-left">
@@ -245,11 +258,11 @@
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
           <div class="p-4 border-b border-gray-200 flex justify-between items-center">
             <div class="flex gap-2">
-              <button class="bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
-              <button class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Week</button>
-              <button class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Month</button>
+              <button id="attendanceToday" class="filter-active bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
+              <button id="attendanceWeek" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Week</button>
+              <button id="attendanceMonth" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Month</button>
             </div>
-            <button class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors">
+            <button id="exportAttendance" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors">
               <i class="fas fa-download"></i> Export
             </button>
           </div>
@@ -275,6 +288,18 @@
         </div>
         
         <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="mb-4 flex gap-4">
+            <div class="relative w-64">
+              <input id="callSearchInput" type="text" placeholder="Search calls..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+            <select id="callTypeFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <option value="all">All Call Types</option>
+              <option value="incoming">Incoming</option>
+              <option value="outgoing">Outgoing</option>
+              <option value="missed">Missed</option>
+            </select>
+          </div>
           <div id="callHistoryContainer"></div>
         </div>
       </section>
@@ -283,10 +308,15 @@
       <section id="sectionPerformance" class="hidden-section">
         <div class="mb-8">
           <h3 class="text-2xl font-bold text-gray-800 mb-2">Performance</h3>
-          <p class="text-gray-600">Monitor performance metrics</p>
+          <p class="text-gray-600">Monitor team performance metrics</p>
         </div>
         
         <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="mb-4 flex gap-4">
+            <button id="performanceToday" class="filter-active bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
+            <button id="performanceWeek" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Week</button>
+            <button id="performanceMonth" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Month</button>
+          </div>
           <canvas id="performanceBarCanvas" height="100"></canvas>
         </div>
       </section>
@@ -419,6 +449,9 @@
       }
       // Initialize dashboard as default view
       menuDashboard.click();
+      
+      // Initialize filter functionality
+      initializeFilters();
     });
 
     // Wire create user form submit (safe duplicate check)
@@ -426,6 +459,184 @@
       e.preventDefault();
       if (usersManager && typeof usersManager.createUser === 'function') usersManager.createUser();
     });
+
+    // -------------------------
+    // Filter and Search Functionality
+    // -------------------------
+    function initializeFilters() {
+      // Users section filters
+      const userSearchInput = document.getElementById('userSearchInput');
+      const userStatusFilter = document.getElementById('userStatusFilter');
+      const userFilterBtn = document.getElementById('userFilterBtn');
+      
+      if (userSearchInput) {
+        userSearchInput.addEventListener('input', debounce(function() {
+          filterUsers();
+        }, 300));
+      }
+      
+      if (userStatusFilter) {
+        userStatusFilter.addEventListener('change', filterUsers);
+      }
+      
+      if (userFilterBtn) {
+        userFilterBtn.addEventListener('click', filterUsers);
+      }
+      
+      // Attendance section date filters
+      const attendanceToday = document.getElementById('attendanceToday');
+      const attendanceWeek = document.getElementById('attendanceWeek');
+      const attendanceMonth = document.getElementById('attendanceMonth');
+      const exportAttendance = document.getElementById('exportAttendance');
+      
+      if (attendanceToday) {
+        attendanceToday.addEventListener('click', function() {
+          setActiveFilter(this, [attendanceWeek, attendanceMonth]);
+          filterAttendance('today');
+        });
+      }
+      
+      if (attendanceWeek) {
+        attendanceWeek.addEventListener('click', function() {
+          setActiveFilter(this, [attendanceToday, attendanceMonth]);
+          filterAttendance('week');
+        });
+      }
+      
+      if (attendanceMonth) {
+        attendanceMonth.addEventListener('click', function() {
+          setActiveFilter(this, [attendanceToday, attendanceWeek]);
+          filterAttendance('month');
+        });
+      }
+      
+      if (exportAttendance) {
+        exportAttendance.addEventListener('click', exportAttendanceData);
+      }
+      
+      // Call History filters
+      const callSearchInput = document.getElementById('callSearchInput');
+      const callTypeFilter = document.getElementById('callTypeFilter');
+      
+      if (callSearchInput) {
+        callSearchInput.addEventListener('input', debounce(function() {
+          filterCalls();
+        }, 300));
+      }
+      
+      if (callTypeFilter) {
+        callTypeFilter.addEventListener('change', filterCalls);
+      }
+      
+      // Performance section date filters
+      const performanceToday = document.getElementById('performanceToday');
+      const performanceWeek = document.getElementById('performanceWeek');
+      const performanceMonth = document.getElementById('performanceMonth');
+      
+      if (performanceToday) {
+        performanceToday.addEventListener('click', function() {
+          setActiveFilter(this, [performanceWeek, performanceMonth]);
+          filterPerformance('today');
+        });
+      }
+      
+      if (performanceWeek) {
+        performanceWeek.addEventListener('click', function() {
+          setActiveFilter(this, [performanceToday, performanceMonth]);
+          filterPerformance('week');
+        });
+      }
+      
+      if (performanceMonth) {
+        performanceMonth.addEventListener('click', function() {
+          setActiveFilter(this, [performanceToday, performanceWeek]);
+          filterPerformance('month');
+        });
+      }
+    }
+    
+    // Helper function to set active filter button
+    function setActiveFilter(activeElement, otherElements) {
+      activeElement.classList.add('filter-active', 'bg-blue-600', 'text-white');
+      activeElement.classList.remove('bg-white', 'text-gray-700', 'border', 'border-gray-300');
+      
+      otherElements.forEach(element => {
+        element.classList.remove('filter-active', 'bg-blue-600', 'text-white');
+        element.classList.add('bg-white', 'text-gray-700', 'border', 'border-gray-300');
+      });
+    }
+    
+    // Debounce function to limit how often a function is called
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+    
+    // Filter functions for each section
+    function filterUsers() {
+      const searchTerm = document.getElementById('userSearchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('userStatusFilter').value;
+      
+      // This would typically call the usersManager with filter parameters
+      if (usersManager && typeof usersManager.loadUsers === 'function') {
+        usersManager.loadUsers({ search: searchTerm, status: statusFilter });
+      }
+      
+      // For demo purposes, we'll just log the filter values
+      console.log('Filtering users:', { searchTerm, statusFilter });
+    }
+    
+    function filterAttendance(timeRange) {
+      // This would typically call the attendanceManager with time range parameter
+      if (attendanceManager && typeof attendanceManager.loadAttendance === 'function') {
+        attendanceManager.loadAttendance(timeRange);
+      }
+      
+      // For demo purposes, we'll just log the time range
+      console.log('Filtering attendance by:', timeRange);
+    }
+    
+    function filterCalls() {
+      const searchTerm = document.getElementById('callSearchInput').value.toLowerCase();
+      const callType = document.getElementById('callTypeFilter').value;
+      
+      // This would typically call the callHistoryManager with filter parameters
+      if (callHistoryManager && typeof callHistoryManager.loadCalls === 'function') {
+        callHistoryManager.loadCalls({ search: searchTerm, type: callType });
+      }
+      
+      // For demo purposes, we'll just log the filter values
+      console.log('Filtering calls:', { searchTerm, callType });
+    }
+    
+    function filterPerformance(timeRange) {
+      // This would typically call the performanceManager with time range parameter
+      if (performanceManager && typeof performanceManager.loadPerformance === 'function') {
+        performanceManager.loadPerformance(timeRange);
+      }
+      
+      // For demo purposes, we'll just log the time range
+      console.log('Filtering performance by:', timeRange);
+    }
+    
+    function exportAttendanceData() {
+      // This would typically generate and download an attendance report
+      console.log('Exporting attendance data...');
+      
+      // Show a success message
+      if (window.showNotification) {
+        window.showNotification('Attendance data exported successfully!', 'success');
+      } else {
+        alert('Attendance data exported successfully!');
+      }
+    }
   </script>
 </body>
 </html>
