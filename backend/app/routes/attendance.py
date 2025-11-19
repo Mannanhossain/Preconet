@@ -1,50 +1,82 @@
-# app/routes/admin_attendance.py
+# app/routes/attendance.py
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
-from app.models import db, Attendance, User
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.models import db, Attendance
+from datetime import datetime
+import uuid
 
-bp = Blueprint("admin_attendance", __name__, url_prefix="/api/admin/attendance")
-
-
-def admin_required():
-    claims = get_jwt()
-    return claims.get("role") == "admin"
+bp = Blueprint("attendance", __name__, url_prefix="/api/attendance")
 
 
-@bp.route("", methods=["GET"])
+def ts_to_datetime(value):
+    """Convert milliseconds timestamp safely."""
+    if not value:
+        return None
+    try:
+        return datetime.fromtimestamp(int(value) / 1000)
+    except:
+        return None
+
+
+@bp.route("/sync", methods=["POST"])
 @jwt_required()
-def list_attendance():
-    if not admin_required():
-        return jsonify({"error": "Admin access only"}), 403
+def sync_attendance():
+    try:
+        data = request.get_json()
 
-    admin_id = int(get_jwt_identity())
+        if not data or "records" not in data:
+            return jsonify({"error": "Invalid request format"}), 400
 
-    # pagination
-    page = int(request.args.get("page", 1))
-    per_page = min(int(request.args.get("per_page", 25)), 200)
+        user_id = int(get_jwt_identity())
+        records = data["records"]
 
-    # all users under this admin
-    user_ids = [u.id for u in User.query.filter_by(admin_id=admin_id).all()]
+        for rec in records:
 
-    query = Attendance.query.filter(Attendance.user_id.in_(user_ids)) \
-                            .order_by(Attendance.created_at.desc())
+            external_id = rec.get("id")  # mobile-side ID
 
-    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+            # Check if record already exists
+            existing = None
+            if external_id:
+                existing = Attendance.query.filter_by(
+                    external_id=external_id,
+                    user_id=user_id
+                ).first()
 
-    rows = []
-    for a in paginated.items:
-        rows.append({
-            "id": a.id,
-            "user_id": a.user_id,
-            "user_name": User.query.get(a.user_id).name,
-            "check_in": a.check_in.isoformat() if a.check_in else None,
-            "check_out": a.check_out.isoformat() if a.check_out else None,
-            "status": a.status
-        })
+            if existing:
+                # UPDATE existing
+                existing.check_in = ts_to_datetime(rec.get("check_in"))
+                existing.check_out = ts_to_datetime(rec.get("check_out"))
+                existing.latitude = rec.get("latitude")
+                existing.longitude = rec.get("longitude")
+                existing.address = rec.get("location")
+                existing.image_path = rec.get("imagePath")
+                existing.status = rec.get("status", "present")
+                existing.synced = True
+                existing.sync_timestamp = datetime.utcnow()
 
-    return jsonify({
-        "attendance": rows,
-        "total": paginated.total,
-        "page": paginated.page,
-        "pages": paginated.pages
-    }), 200
+            else:
+                # INSERT new
+                new_rec = Attendance(
+                    id = uuid.uuid4().hex,
+                    external_id = external_id,
+                    user_id = user_id,
+                    check_in = ts_to_datetime(rec.get("check_in")),
+                    check_out = ts_to_datetime(rec.get("check_out")),
+                    latitude = rec.get("latitude"),
+                    longitude = rec.get("longitude"),
+                    address = rec.get("location"),
+                    image_path = rec.get("imagePath"),
+                    status = rec.get("status", "present"),
+                    synced = True,
+                    sync_timestamp = datetime.utcnow()
+                )
+                db.session.add(new_rec)
+
+        db.session.commit()
+
+        return jsonify({"status": "success", "message": "Attendance synced"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(e)
+        return jsonify({"error": "Internal server error", "detail": str(e)}), 500
