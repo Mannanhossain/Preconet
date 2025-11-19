@@ -1,6 +1,6 @@
 # app/routes/admin_attendance.py
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from sqlalchemy import func
 from app.models import db, Attendance, User
 
@@ -8,7 +8,7 @@ bp = Blueprint("admin_attendance", __name__, url_prefix="/api/admin/attendance")
 
 
 # -----------------------------
-# Helper: check if token is admin
+# Helper: check admin role
 # -----------------------------
 def admin_required():
     claims = get_jwt()
@@ -16,16 +16,15 @@ def admin_required():
 
 
 # -----------------------------
-# Get Attendance (Admin View)
+# ADMIN ATTENDANCE LIST
 # -----------------------------
 @bp.route("", methods=["GET"])
 @jwt_required()
 def get_attendance():
-    # check admin role
+    # verify admin role
     if not admin_required():
         return jsonify({"error": "Admin access only"}), 403
 
-    # get admin id from JWT
     admin_id = int(get_jwt_identity())
 
     # pagination
@@ -38,28 +37,34 @@ def get_attendance():
 
     per_page = max(1, min(per_page, 100))
 
-    # get users under this admin
-    user_ids = [u.id for u in User.query.filter_by(admin_id=admin_id).all()]
+    # fetch all users under this admin
+    users = User.query.filter_by(admin_id=admin_id).all()
+    user_ids = [u.id for u in users]
 
     if not user_ids:
-        return jsonify({"attendance": [], "meta": {"total": 0}})
+        return jsonify({
+            "attendance": [],
+            "meta": {"page": 1, "per_page": per_page, "total": 0, "pages": 0}
+        })
 
-    # fetch attendance for all these users
-    q = Attendance.query.filter(Attendance.user_id.in_(user_ids)).order_by(
-        Attendance.check_in.desc()
-    )
+    # fetch attendance for the admin's users
+    q = Attendance.query.filter(
+        Attendance.user_id.in_(user_ids)
+    ).order_by(Attendance.check_in.desc())
 
     paginated = q.paginate(page=page, per_page=per_page, error_out=False)
 
-    # include user name
-    results = []
-    users = {u.id: u.name for u in User.query.filter(User.id.in_(user_ids)).all()}
+    # prepare user name map
+    user_map = {u.id: u.name for u in users}
 
+    # prepare result list
+    results = []
     for a in paginated.items:
         results.append({
             "id": a.id,
             "user_id": a.user_id,
-            "user_name": users.get(a.user_id, "Unknown"),
+            # ⭐ FIX: always provide valid user_name
+            "user_name": user_map.get(a.user_id) or f"User {a.user_id}",
             "check_in": a.check_in.isoformat() if a.check_in else None,
             "check_out": a.check_out.isoformat() if a.check_out else None,
             "status": a.status,
@@ -76,22 +81,21 @@ def get_attendance():
             "total": paginated.total,
             "pages": paginated.pages,
             "has_next": paginated.has_next,
-            "has_prev": paginated.has_prev,
+            "has_prev": paginated.has_prev
         }
     }), 200
 
 
 # -----------------------------
-# Debug: view all attendance
+# DEBUG: SHOW ALL ATTENDANCE
 # -----------------------------
 @bp.route("/debug", methods=["GET"])
 def debug_att():
-    data = [a.to_dict() for a in Attendance.query.all()]
-    return jsonify(data)
+    return jsonify([a.to_dict() for a in Attendance.query.all()])
 
 
 # -----------------------------
-# Debug: list all users
+# DEBUG: SHOW ALL USERS
 # -----------------------------
 @bp.route("/debug_users", methods=["GET"])
 def debug_users():
