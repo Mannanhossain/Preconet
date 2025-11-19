@@ -1,3 +1,5 @@
+# app/__init__.py
+
 from flask import Flask, jsonify, send_from_directory
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
@@ -10,6 +12,7 @@ from config import Config
 
 jwt = JWTManager()
 migrate = Migrate()
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -25,7 +28,7 @@ def create_app(config_class=Config):
     CORS(app)
 
     # ------------------------------------------
-    # 🔧 AUTO-FIX DATABASE (WORKS ON RENDER FREE)
+    # 🔧 AUTO-FIX DATABASE (Render Safe)
     # ------------------------------------------
     with app.app_context():
         try:
@@ -46,17 +49,17 @@ def create_app(config_class=Config):
     from app.routes.users import bp as users_bp
     from app.routes.fix import bp as fix_bp
     from app.routes.attendance import bp as attendance_bp
+    from app.routes.call_history import bp as call_history_bp          # ⭐ IMPORTANT
+    from app.routes.admin_attendance import bp as admin_attendance_bp  # ⭐ ADMIN ATTENDANCE
 
-    # ⭐ NEW BLUEPRINT for Admin Attendance
-    from app.routes.admin_attendance import bp as admin_attendance_bp
-
-    # Register all blueprints
+    # Register all
     app.register_blueprint(super_admin_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(fix_bp)
     app.register_blueprint(attendance_bp)
-    app.register_blueprint(admin_attendance_bp)  # ⭐ added here
+    app.register_blueprint(call_history_bp)         # ⭐ ADDED
+    app.register_blueprint(admin_attendance_bp)     # ⭐ ADDED
 
     # ------------------------------------------
     # DATABASE INITIALIZATION + DEFAULT SUPER ADMIN
@@ -70,17 +73,17 @@ def create_app(config_class=Config):
             db.create_all()
             print("✅ Database created")
 
-        # Create default Super Admin only once
+        # Default Super Admin
         if not SuperAdmin.query.first():
             print("⚙️ Creating default super admin...")
             sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
             sa.set_password("admin123")
             db.session.add(sa)
             db.session.commit()
-            print("✅ Default SuperAdmin READY (super@callmanager.com / admin123)")
+            print("✅ Default SuperAdmin READY")
 
     # ------------------------------------------
-    # FRONTEND PATH
+    # FRONTEND ROUTES
     # ------------------------------------------
     FRONTEND_PATH = os.path.abspath(os.path.join(os.getcwd(), "frontend"))
     print("📁 FRONTEND PATH:", FRONTEND_PATH)
