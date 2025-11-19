@@ -2,7 +2,7 @@ from flask import Flask, jsonify, send_from_directory
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_cors import CORS
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 import os
 
 from app.models import db, bcrypt, SuperAdmin
@@ -25,19 +25,33 @@ def create_app(config_class=Config):
     CORS(app)
 
     # ------------------------------------------
+    # 🔧 AUTO-FIX DATABASE (WORKS ON RENDER FREE)
+    # ------------------------------------------
+    with app.app_context():
+        try:
+            db.session.execute(text(
+                "ALTER TABLE attendances "
+                "ADD COLUMN IF NOT EXISTS external_id VARCHAR(64);"
+            ))
+            db.session.commit()
+            print("🔧 AUTO-FIX: external_id column ensured.")
+        except Exception as e:
+            print("⚠️ AUTO-FIX ERROR:", e)
+
+    # ------------------------------------------
     # REGISTER BLUEPRINTS
     # ------------------------------------------
     from app.routes.super_admin import bp as super_admin_bp
     from app.routes.admin import bp as admin_bp
     from app.routes.users import bp as users_bp
     from app.routes.fix import bp as fix_bp
-    from app.routes.attendance import bp as attendance_bp  # ✅ FIXED
+    from app.routes.attendance import bp as attendance_bp  # Already correct
 
     app.register_blueprint(super_admin_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(fix_bp)
-    app.register_blueprint(attendance_bp)                 # ✅ FIXED
+    app.register_blueprint(attendance_bp)
 
     # ------------------------------------------
     # DATABASE INITIALIZATION + DEFAULT SUPER ADMIN
