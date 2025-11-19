@@ -34,7 +34,6 @@ def sync_attendance():
 
             new_rec = Attendance(
                 id = rec.get("id") or uuid.uuid4().hex,
-                external_id = rec.get("id"),
                 user_id = user_id,
                 check_in = check_in,
                 check_out = check_out,
@@ -57,3 +56,4 @@ def sync_attendance():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Internal server error", "detail": str(e)}), 500
+
