@@ -1,4 +1,4 @@
-# app/models.py  (corrected)
+# app/models.py
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import datetime
@@ -6,7 +6,6 @@ import enum
 import json
 import uuid
 from sqlalchemy.types import Text, TypeDecorator
-from sqlalchemy.dialects import postgresql as pg_types
 from sqlalchemy import JSON as SA_JSON
 
 db = SQLAlchemy()
@@ -17,8 +16,11 @@ bcrypt = Bcrypt()
 # Helpers
 # -------------------------
 def now():
-    # naive UTC datetime (consistent across models)
     return datetime.utcnow()
+
+
+def gen_uuid():
+    return uuid.uuid4().hex
 
 
 # =========================================================
@@ -31,12 +33,9 @@ class UserRole(enum.Enum):
 
 
 # =========================================================
-# JSONType: fallback for SQLite (TypeDecorator)
+# JSONType Fallback (SQLite-safe)
 # =========================================================
 class JSONType(TypeDecorator):
-    """
-    Fallback JSON type for SQLite. Serializes to TEXT.
-    """
     impl = Text
 
     def process_bind_param(self, value, dialect):
@@ -44,8 +43,7 @@ class JSONType(TypeDecorator):
             return None
         try:
             return json.dumps(value)
-        except Exception:
-            # Last-resort: stringify
+        except:
             return json.dumps(str(value))
 
     def process_result_value(self, value, dialect):
@@ -53,25 +51,14 @@ class JSONType(TypeDecorator):
             return None
         try:
             return json.loads(value)
-        except Exception:
-            # If stored as simple string, return it as-is
-            try:
-                return json.loads(value.replace("'", '"'))
-            except Exception:
-                return value
+        except:
+            return value
 
 
 def JSONAuto():
-    """
-    Return a JSON-compatible column type:
-      - prefer SQLAlchemy / PostgreSQL JSON if available
-      - fallback to JSONType (TEXT) for SQLite or unknown
-    This function avoids accessing db.engine at import time in a fragile way.
-    """
     try:
-        # SA_JSON is SQLAlchemy's JSON type; it maps to native JSON in PG
         return SA_JSON
-    except Exception:
+    except:
         return JSONType
 
 
@@ -95,7 +82,7 @@ class SuperAdmin(db.Model):
 
 
 # =========================================================
-# ADMIN MODEL
+# ADMIN
 # =========================================================
 class Admin(db.Model):
     __tablename__ = "admins"
@@ -106,11 +93,10 @@ class Admin(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
 
     user_limit = db.Column(db.Integer, default=10)
-    # make expiry_date nullable to avoid commit errors when not provided
     expiry_date = db.Column(db.DateTime, nullable=True)
 
     created_by = db.Column(db.Integer, db.ForeignKey("super_admins.id"), nullable=False)
-    creator = db.relationship("SuperAdmin", backref=db.backref("admins", lazy=True))
+    creator = db.relationship("SuperAdmin")
 
     created_at = db.Column(db.DateTime, default=now)
     last_login = db.Column(db.DateTime)
@@ -119,8 +105,8 @@ class Admin(db.Model):
     users = db.relationship(
         "User",
         backref="admin",
-        cascade="all, delete-orphan",
-        lazy=True
+        lazy=True,
+        cascade="all, delete-orphan"
     )
 
     def set_password(self, password):
@@ -130,11 +116,11 @@ class Admin(db.Model):
         return bcrypt.check_password_hash(self.password_hash, password)
 
     def is_expired(self):
-        return self.expiry_date is not None and datetime.utcnow() > self.expiry_date
+        return self.expiry_date and datetime.utcnow() > self.expiry_date
 
 
 # =========================================================
-# USER MODEL
+# USER
 # =========================================================
 class User(db.Model):
     __tablename__ = "users"
@@ -173,16 +159,11 @@ class User(db.Model):
 
 
 # =========================================================
-# ATTENDANCE MODEL (string PK as you had it)
+# ATTENDANCE
 # =========================================================
-def gen_uuid():
-    return uuid.uuid4().hex
-
-
 class Attendance(db.Model):
     __tablename__ = "attendances"
 
-    # keep string id but generate by default to avoid missing id errors
     id = db.Column(db.String(64), primary_key=True, default=gen_uuid)
     external_id = db.Column(db.String(64), index=True)
 
@@ -224,7 +205,7 @@ class Attendance(db.Model):
 
 
 # =========================================================
-# CALL HISTORY MODEL
+# CALL HISTORY
 # =========================================================
 class CallHistory(db.Model):
     __tablename__ = "call_history"
@@ -233,7 +214,6 @@ class CallHistory(db.Model):
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    # Use names that match your client & routes: phone_number & contact_name
     phone_number = db.Column(db.String(50))
     formatted_number = db.Column(db.String(100))
     call_type = db.Column(db.String(20))  # incoming/outgoing/missed/rejected
@@ -261,7 +241,7 @@ class CallHistory(db.Model):
 
 
 # =========================================================
-# CALL METRICS (optional separate table)
+# CALL METRICS
 # =========================================================
 class CallMetrics(db.Model):
     __tablename__ = "call_metrics"
@@ -274,6 +254,7 @@ class CallMetrics(db.Model):
     outgoing_calls = db.Column(db.Integer, default=0)
     missed_calls = db.Column(db.Integer, default=0)
     rejected_calls = db.Column(db.Integer, default=0)
+
     total_duration = db.Column(db.Integer, default=0)
     period_days = db.Column(db.Integer, default=0)
 
@@ -282,7 +263,7 @@ class CallMetrics(db.Model):
 
 
 # =========================================================
-# ACTIVITY LOG MODEL
+# ACTIVITY LOG
 # =========================================================
 class ActivityLog(db.Model):
     __tablename__ = "activity_logs"
@@ -297,18 +278,17 @@ class ActivityLog(db.Model):
     target_type = db.Column(db.String(50), nullable=False)
     target_id = db.Column(db.Integer)
 
-    extra_data = db.Column(JSONAuto(), nullable=True)
-
+    extra_data = db.Column(JSONAuto())
     timestamp = db.Column(db.DateTime, default=now)
 
     def to_dict(self):
         return {
             "id": self.id,
-            "actor_role": self.actor_role.value if self.actor_role else None,
+            "actor_role": self.actor_role.value,
             "actor_id": self.actor_id,
             "action": self.action,
             "target_type": self.target_type,
             "target_id": self.target_id,
             "extra_data": self.extra_data,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None
         }
