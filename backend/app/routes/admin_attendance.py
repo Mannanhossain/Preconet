@@ -9,6 +9,11 @@ bp = Blueprint("admin_attendance", __name__, url_prefix="/api/admin/attendance")
 def admin_required():
     claims = get_jwt()
     return claims.get("role") == "admin"
+@bp.route("/debug", methods=["GET"])
+def debug_att():
+    all_att = Attendance.query.all()
+    return jsonify([a.to_dict() for a in all_att])
+
 
 
 @bp.route("", methods=["GET"])
