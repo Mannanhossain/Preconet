@@ -1,4 +1,5 @@
 # app/routes/call_history.py
+# app/routes/call_history.py
 import uuid
 from datetime import datetime, timezone, timedelta
 from functools import wraps
@@ -8,8 +9,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.extensions import db
-from app.models import User, CallHistory, Attendance
+from app.models import db, User, CallHistory, Attendance   # ✅ FIXED
+
 
 bp = Blueprint("call_history", __name__, url_prefix="/api/call-history")
 
@@ -317,3 +318,4 @@ def admin_user_call_history(user_id):
     except Exception as e:
         current_app.logger.exception("Failed admin_user_call_history")
         return jsonify({"error": str(e)}), 500
+
