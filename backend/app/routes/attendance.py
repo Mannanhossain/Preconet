@@ -1,81 +1,50 @@
+# app/routes/admin_attendance.py
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.models import db, Attendance
-from datetime import datetime
-import uuid
+from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
+from app.models import db, Attendance, User
 
-bp = Blueprint("attendance", __name__, url_prefix="/api/attendance")
+bp = Blueprint("admin_attendance", __name__, url_prefix="/api/admin/attendance")
 
 
-def ts_to_datetime(value):
-    """Convert milliseconds timestamp safely."""
-    if not value:
-        return None
-    try:
-        return datetime.fromtimestamp(int(value) / 1000)
-    except:
-        return None
+def admin_required():
+    claims = get_jwt()
+    return claims.get("role") == "admin"
 
 
-@bp.route("/sync", methods=["POST"])
+@bp.route("", methods=["GET"])
 @jwt_required()
-def sync_attendance():
-    try:
-        data = request.get_json()
+def list_attendance():
+    if not admin_required():
+        return jsonify({"error": "Admin access only"}), 403
 
-        if not data or "records" not in data:
-            return jsonify({"error": "Invalid request format"}), 400
+    admin_id = int(get_jwt_identity())
 
-        user_id = int(get_jwt_identity())
-        records = data["records"]
+    # pagination
+    page = int(request.args.get("page", 1))
+    per_page = min(int(request.args.get("per_page", 25)), 200)
 
-        for rec in records:
+    # all users under this admin
+    user_ids = [u.id for u in User.query.filter_by(admin_id=admin_id).all()]
 
-            external_id = rec.get("id")  # mobile-side ID
+    query = Attendance.query.filter(Attendance.user_id.in_(user_ids)) \
+                            .order_by(Attendance.created_at.desc())
 
-            # first try to find existing record by external_id
-            existing = None
-            if external_id:
-                existing = Attendance.query.filter_by(
-                    external_id=external_id,
-                    user_id=user_id
-                ).first()
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 
-            if existing:
-                # UPDATE existing record
-                existing.check_in = ts_to_datetime(rec.get("check_in"))
-                existing.check_out = ts_to_datetime(rec.get("check_out"))
-                existing.latitude = rec.get("latitude")
-                existing.longitude = rec.get("longitude")
-                existing.address = rec.get("location")
-                existing.image_path = rec.get("imagePath")
-                existing.status = rec.get("status", "present")
-                existing.synced = True
-                existing.sync_timestamp = datetime.utcnow()
+    rows = []
+    for a in paginated.items:
+        rows.append({
+            "id": a.id,
+            "user_id": a.user_id,
+            "user_name": User.query.get(a.user_id).name,
+            "check_in": a.check_in.isoformat() if a.check_in else None,
+            "check_out": a.check_out.isoformat() if a.check_out else None,
+            "status": a.status
+        })
 
-            else:
-                # INSERT new record
-                new_rec = Attendance(
-                    id = uuid.uuid4().hex,              # backend primary id
-                    external_id = external_id,          # mobile id stored here
-                    user_id = user_id,
-                    check_in = ts_to_datetime(rec.get("check_in")),
-                    check_out = ts_to_datetime(rec.get("check_out")),
-                    latitude = rec.get("latitude"),
-                    longitude = rec.get("longitude"),
-                    address = rec.get("location"),
-                    image_path = rec.get("imagePath"),
-                    status = rec.get("status", "present"),
-                    synced = True,
-                    sync_timestamp = datetime.utcnow()
-                )
-                db.session.add(new_rec)
-
-        db.session.commit()
-
-        return jsonify({"status": "success", "message": "Attendance synced"}), 200
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "Internal server error", "detail": str(e)}), 500
+    return jsonify({
+        "attendance": rows,
+        "total": paginated.total,
+        "page": paginated.page,
+        "pages": paginated.pages
+    }), 200
