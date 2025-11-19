@@ -45,20 +45,18 @@ def create_app(config_class=Config):
     from app.routes.admin import bp as admin_bp
     from app.routes.users import bp as users_bp
     from app.routes.fix import bp as fix_bp
-    from app.routes.attendance import bp as attendance_bp  # user sync
+    from app.routes.attendance import bp as attendance_bp
 
-    # ⭐ ADD THIS NEW IMPORT
+    # ⭐ NEW BLUEPRINT for Admin Attendance
     from app.routes.admin_attendance import bp as admin_attendance_bp
 
-    # Registering routes
+    # Register all blueprints
     app.register_blueprint(super_admin_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(fix_bp)
-    app.register_blueprint(attendance_bp)         # user attendance sync
-
-    # ⭐ ADD THIS NEW REGISTRATION
-    app.register_blueprint(admin_attendance_bp)   # admin attendance view
+    app.register_blueprint(attendance_bp)
+    app.register_blueprint(admin_attendance_bp)  # ⭐ added here
 
     # ------------------------------------------
     # DATABASE INITIALIZATION + DEFAULT SUPER ADMIN
@@ -72,6 +70,7 @@ def create_app(config_class=Config):
             db.create_all()
             print("✅ Database created")
 
+        # Create default Super Admin only once
         if not SuperAdmin.query.first():
             print("⚙️ Creating default super admin...")
             sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
