@@ -10,8 +10,8 @@ from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import func
 
-from extensions import db
-from ..models import User, Attendance, CallHistory  # adjust import path to your project
+from app.extensions import db
+from app.models import User, Attendance, CallHistory  # adjust import path to your project
 
 bp = Blueprint("attendance", __name__, url_prefix="/api/attendance")
 
