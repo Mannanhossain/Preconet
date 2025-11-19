@@ -6,6 +6,17 @@ import uuid
 
 bp = Blueprint("attendance", __name__, url_prefix="/api/attendance")
 
+
+def ts_to_datetime(value):
+    """Convert milliseconds timestamp safely."""
+    if not value:
+        return None
+    try:
+        return datetime.fromtimestamp(int(value) / 1000)
+    except:
+        return None
+
+
 @bp.route("/sync", methods=["POST"])
 @jwt_required()
 def sync_attendance():
@@ -20,33 +31,45 @@ def sync_attendance():
 
         for rec in records:
 
-            # FIX: convert check_in/check_out safely
-            check_in = None
-            if "check_in" in rec:
-                check_in = datetime.fromtimestamp(int(rec["check_in"]) / 1000)
+            external_id = rec.get("id")  # mobile-side ID
 
-            check_out = None
-            if "check_out" in rec and rec["check_out"]:
-                check_out = datetime.fromtimestamp(int(rec["check_out"]) / 1000)
+            # first try to find existing record by external_id
+            existing = None
+            if external_id:
+                existing = Attendance.query.filter_by(
+                    external_id=external_id,
+                    user_id=user_id
+                ).first()
 
-            # FIX: address instead of location
-            address = rec.get("location")
+            if existing:
+                # UPDATE existing record
+                existing.check_in = ts_to_datetime(rec.get("check_in"))
+                existing.check_out = ts_to_datetime(rec.get("check_out"))
+                existing.latitude = rec.get("latitude")
+                existing.longitude = rec.get("longitude")
+                existing.address = rec.get("location")
+                existing.image_path = rec.get("imagePath")
+                existing.status = rec.get("status", "present")
+                existing.synced = True
+                existing.sync_timestamp = datetime.utcnow()
 
-            new_rec = Attendance(
-                id = rec.get("id") or uuid.uuid4().hex,
-                user_id = user_id,
-                check_in = check_in,
-                check_out = check_out,
-                latitude = rec.get("latitude"),
-                longitude = rec.get("longitude"),
-                address = address,
-                image_path = rec.get("imagePath"),
-                status = rec.get("status", "present"),
-                synced = True,
-                sync_timestamp = datetime.utcnow()
-            )
-
-            db.session.add(new_rec)
+            else:
+                # INSERT new record
+                new_rec = Attendance(
+                    id = uuid.uuid4().hex,              # backend primary id
+                    external_id = external_id,          # mobile id stored here
+                    user_id = user_id,
+                    check_in = ts_to_datetime(rec.get("check_in")),
+                    check_out = ts_to_datetime(rec.get("check_out")),
+                    latitude = rec.get("latitude"),
+                    longitude = rec.get("longitude"),
+                    address = rec.get("location"),
+                    image_path = rec.get("imagePath"),
+                    status = rec.get("status", "present"),
+                    synced = True,
+                    sync_timestamp = datetime.utcnow()
+                )
+                db.session.add(new_rec)
 
         db.session.commit()
 
@@ -56,4 +79,3 @@ def sync_attendance():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Internal server error", "detail": str(e)}), 500
-
