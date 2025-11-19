@@ -11,7 +11,6 @@ from config import Config
 jwt = JWTManager()
 migrate = Migrate()
 
-
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -32,11 +31,13 @@ def create_app(config_class=Config):
     from app.routes.admin import bp as admin_bp
     from app.routes.users import bp as users_bp
     from app.routes.fix import bp as fix_bp
+    from app.routes.attendance import bp as attendance_bp  # ✅ FIXED
 
     app.register_blueprint(super_admin_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(fix_bp)
+    app.register_blueprint(attendance_bp)                 # ✅ FIXED
 
     # ------------------------------------------
     # DATABASE INITIALIZATION + DEFAULT SUPER ADMIN
@@ -60,59 +61,35 @@ def create_app(config_class=Config):
             print("✅ Default SuperAdmin READY (super@callmanager.com / admin123)")
 
     # ------------------------------------------
-    # FIXED FRONTEND PATH FOR RENDER
+    # FRONTEND PATH
     # ------------------------------------------
     FRONTEND_PATH = os.path.abspath(os.path.join(os.getcwd(), "frontend"))
     print("📁 FRONTEND PATH:", FRONTEND_PATH)
 
-    # ------------------------------------------
-    # ROOT ENDPOINT
-    # ------------------------------------------
     @app.route("/")
     def home():
         return jsonify({
             "status": "running",
-            "message": "Call Manager Pro Backend is LIVE!",
-            "routes": {
-                "health": "/api/health",
-                "super_admin_login": "/api/superadmin/login",
-                "admin_login": "/api/admin/login",
-                "user_login": "/api/users/login",
-            }
+            "message": "Call Manager Pro Backend is LIVE!"
         })
 
-    # ------------------------------------------
-    # HEALTH CHECK
-    # ------------------------------------------
     @app.route("/api/health")
     def health():
         return jsonify({"status": "running", "database": "connected"}), 200
 
-    # ------------------------------------------
-    # SUPER ADMIN UI ROUTES
-    # ------------------------------------------
+    # SUPER ADMIN PANEL
     @app.route("/super_admin/login.html")
     def super_admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
-
-    @app.route("/super_admin")
-    def super_admin_dashboard():
-        return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "index.html")
 
     @app.route("/super_admin/<path:filename>")
     def super_admin_static(filename):
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
 
-    # ------------------------------------------
-    # ADMIN UI ROUTES
-    # ------------------------------------------
+    # ADMIN PANEL
     @app.route("/admin/login.html")
     def admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
-
-    @app.route("/admin")
-    def admin_dashboard():
-        return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "index.html")
 
     @app.route("/admin/<path:filename>")
     def admin_static(filename):
