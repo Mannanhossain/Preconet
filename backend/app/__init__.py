@@ -44,28 +44,21 @@ def create_app(config_class=Config):
     # ------------------------------------------
     # REGISTER BLUEPRINTS
     # ------------------------------------------
-    # ------------------------------------------
-# REGISTER BLUEPRINTS
-# ------------------------------------------
-from app.routes.super_admin import bp as super_admin_bp
-from app.routes.admin import bp as admin_bp
-from app.routes.users import bp as users_bp
-from app.routes.fix import bp as fix_bp
-from app.routes.attendance import bp as attendance_bp
-from app.routes.call_history import bp as call_history_bp
-from app.routes.admin_attendance import bp as admin_attendance_bp
-from app.routes.admin_call_history import bp as admin_call_history_bp   # ⭐ NEW
+    from app.routes.super_admin import bp as super_admin_bp
+    from app.routes.admin import bp as admin_bp
+    from app.routes.users import bp as users_bp
+    from app.routes.fix import bp as fix_bp
+    from app.routes.attendance import bp as attendance_bp
+    from app.routes.call_history import bp as call_history_bp
+    from app.routes.admin_attendance import bp as admin_attendance_bp
 
-# Register all
-app.register_blueprint(super_admin_bp)
-app.register_blueprint(admin_bp)
-app.register_blueprint(users_bp)
-app.register_blueprint(fix_bp)
-app.register_blueprint(attendance_bp)
-app.register_blueprint(call_history_bp)
-app.register_blueprint(admin_attendance_bp)
-app.register_blueprint(admin_call_history_bp)    # ⭐ NEW
-
+    app.register_blueprint(super_admin_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(users_bp)
+    app.register_blueprint(fix_bp)
+    app.register_blueprint(attendance_bp)
+    app.register_blueprint(call_history_bp)
+    app.register_blueprint(admin_attendance_bp)
 
     # ------------------------------------------
     # DATABASE INITIALIZATION + DEFAULT SUPER ADMIN
@@ -79,7 +72,6 @@ app.register_blueprint(admin_call_history_bp)    # ⭐ NEW
             db.create_all()
             print("✅ Database created")
 
-        # Default Super Admin
         if not SuperAdmin.query.first():
             print("⚙️ Creating default super admin...")
             sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
