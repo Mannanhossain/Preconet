@@ -1,45 +1,89 @@
 /* admin/js/attendance.js */
 class AttendanceManager {
-  async loadAttendance(page=1, per_page=25) {
+  async loadAttendance(filter = "today", page = 1, per_page = 25) {
     try {
-      const resp = await auth.makeAuthenticatedRequest(`/api/admin/attendance?page=${page}&per_page=${per_page}`);
+
+      const resp = await auth.makeAuthenticatedRequest(
+        `/api/admin/attendance?filter=${filter}&page=${page}&per_page=${per_page}`
+      );
+
       if (!resp) return;
       const data = await resp.json();
+
       if (!resp.ok) {
-        auth.showNotification(data.error || 'Failed to load attendance', 'error');
+        auth.showNotification(data.error || "Failed to load attendance", "error");
         return;
       }
 
       const items = data.attendance || [];
-      const container = document.getElementById('attendance-cards-container') || document.getElementById('attendance-table-body');
-      if (!container) return;
+      const tableBody = document.getElementById("attendanceTableBody");
+      if (!tableBody) return;
 
-      // If it's table body element name attendance-table-body we render rows, else cards
-      if (container.tagName.toLowerCase() === 'tbody') {
-        container.innerHTML = items.length ? items.map(a => `
+      if (!items.length) {
+        tableBody.innerHTML = `
           <tr>
-            <td class="p-3">${a.user_name || a.user_id}</td>
-            <td class="p-3">${new Date(a.check_in).toLocaleString()}</td>
-            <td class="p-3">${a.check_out ? new Date(a.check_out).toLocaleString() : '-'}</td>
-            <td class="p-3">${a.status}</td>
-          </tr>
-        `).join('') : `<tr><td colspan="4" class="p-4 text-center text-gray-500">No records</td></tr>`;
+            <td colspan="5" class="p-4 text-center text-gray-500">No attendance found</td>
+          </tr>`;
         return;
       }
 
-      container.innerHTML = items.map(a => `
-        <div class="bg-white p-4 rounded shadow">
-          <div class="flex justify-between">
-            <div>
-              <div class="font-medium">${a.user_name || a.user_id}</div>
-              <div class="text-xs text-gray-500">${new Date(a.check_in).toLocaleString()}</div>
-            </div>
-            <div class="text-sm">${a.status}</div>
-          </div>
-        </div>
-      `).join('');
+      tableBody.innerHTML = items.map(a => `
+        <tr class="table-row-hover">
+          
+          <!-- USER NAME -->
+          <td class="p-4 font-medium text-gray-800">
+            ${a.user_name || "Unknown"}
+            <div class="text-xs text-gray-500">${a.external_id || ""}</div>
+          </td>
 
-    } catch (e) { console.error(e); auth.showNotification('Failed to load attendance', 'error'); }
+          <!-- CHECK IN -->
+          <td class="p-4 text-gray-700">
+            ${a.check_in ? new Date(a.check_in).toLocaleString() : "-"}
+            <div class="text-xs text-gray-500">${a.address || ""}</div>
+          </td>
+
+          <!-- CHECK OUT -->
+          <td class="p-4 text-gray-700">
+            ${a.check_out ? new Date(a.check_out).toLocaleString() : "-"}
+          </td>
+
+          <!-- STATUS -->
+          <td class="p-4 text-gray-700 capitalize">${a.status}</td>
+
+          <!-- ACTION BUTTONS -->
+          <td class="p-4">
+
+            <!-- IMAGE PREVIEW -->
+            ${a.image_path ? `
+              <button onclick="attendanceManager.showImage('${a.image_path}')" 
+                      class="text-blue-600 hover:underline mr-4">
+                Image
+              </button>
+            ` : ""}
+
+            <!-- MAP LINK -->
+            ${a.latitude && a.longitude ? `
+              <a href="https://www.google.com/maps?q=${a.latitude},${a.longitude}" 
+                 target="_blank" class="text-green-600 hover:underline">
+                Map
+              </a>
+            ` : ""}
+
+          </td>
+
+        </tr>
+      `).join("");
+
+    } catch (e) {
+      console.error(e);
+      auth.showNotification("Failed to load attendance", "error");
+    }
+  }
+
+  /* IMAGE VIEWER */
+  showImage(path) {
+    const fullPath = `${window.location.origin}/${path}`;
+    window.open(fullPath, "_blank");
   }
 }
 
