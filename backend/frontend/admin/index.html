@@ -248,28 +248,32 @@
       </section>
 
       <!-- Call History -->
-      <section id="sectionCallHistory" class="hidden-section">
-        <div class="mb-8">
-          <h3 class="text-2xl font-bold text-gray-800 mb-2">Call History</h3>
-          <p class="text-gray-600">Review all call records and analytics</p>
-        </div>
-        
-        <div class="bg-white p-6 rounded-xl shadow-sm">
-          <div class="mb-4 flex gap-4">
-            <div class="relative w-64">
-              <input id="callSearchInput" type="text" placeholder="Search calls..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-            </div>
-            <select id="callTypeFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="all">All Call Types</option>
-              <option value="incoming">Incoming</option>
-              <option value="outgoing">Outgoing</option>
-              <option value="missed">Missed</option>
-            </select>
-          </div>
-          <div id="callHistoryContainer"></div>
-        </div>
-      </section>
+     <!-- Call History -->
+<section id="sectionCallHistory" class="hidden-section">
+  <div class="mb-8">
+    <h3 class="text-2xl font-bold text-gray-800 mb-2">Call History</h3>
+    <p class="text-gray-600">Review all call records and analytics</p>
+  </div>
+
+  <div class="bg-white p-6 rounded-xl shadow-sm">
+    <div class="mb-4 flex gap-4">
+      <div class="relative w-64">
+        <input id="callSearchInput" type="text" placeholder="Search calls..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+      </div>
+      <select id="callTypeFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <option value="all">All Call Types</option>
+        <option value="incoming">Incoming</option>
+        <option value="outgoing">Outgoing</option>
+        <option value="missed">Missed</option>
+      </select>
+    </div>
+
+    <!-- 🔥 FIXED CONTAINER -->
+    <div id="call-history-container"></div>
+  </div>
+</section>
+
 
       <!-- Call Analytics -->
       <section id="sectionCallAnalytics" class="hidden-section">
@@ -601,4 +605,5 @@
   </script>
 </body>
 </html>
+
 
