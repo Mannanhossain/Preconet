@@ -105,9 +105,10 @@ def admin_call_analytics():
         values = [trend_map.get(start + timedelta(days=i), 0) for i in range(days)]
 
         # --------- USER SUMMARY ---------
-        incoming_case = func.sum(case((CallHistory.call_type == "incoming", 1), else_=0))
-        outgoing_case = func.sum(case((CallHistory.call_type == "outgoing", 1), else_=0))
-        missed_case = func.sum(case((CallHistory.call_type == "missed", 1), else_=0))
+        incoming_case = func.sum(case([(CallHistory.call_type == "incoming", 1)], else_=0))
+        outgoing_case = func.sum(case([(CallHistory.call_type == "outgoing", 1)], else_=0))
+        missed_case   = func.sum(case([(CallHistory.call_type == "missed", 1)], else_=0))
+
 
         summary = db.session.query(
             User.id,
@@ -208,3 +209,4 @@ def admin_user_call_analytics(user_id):
     except Exception as e:
         current_app.logger.exception("user_analytics error")
         return jsonify({"error": str(e)}), 500
+
