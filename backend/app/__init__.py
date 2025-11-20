@@ -36,7 +36,7 @@ def create_app(config_class=Config):
     from app.routes.fix import bp as fix_bp
     from app.routes.attendance import bp as attendance_bp
     from app.routes.call_history import bp as call_history_bp
-    from app.routes.admin_all_call_history import bp as admin_all_call_history_bp
+    from app.routes.admin_call_history import bp as admin_call_history_bp   # ✅ Correct one
     from app.routes.admin_attendance import bp as admin_attendance_bp
 
     app.register_blueprint(super_admin_bp)
@@ -45,7 +45,7 @@ def create_app(config_class=Config):
     app.register_blueprint(fix_bp)
     app.register_blueprint(attendance_bp)
     app.register_blueprint(call_history_bp)
-    app.register_blueprint(admin_all_call_history_bp)
+    app.register_blueprint(admin_call_history_bp)   # ✅ Register correctly
     app.register_blueprint(admin_attendance_bp)
 
     # ---------------------------
