@@ -1,11 +1,12 @@
 # app/routes/call_history.py
+
 import uuid
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.models import db, User, CallHistory
 
@@ -15,9 +16,9 @@ DEFAULT_PER_PAGE = 25
 MAX_PER_PAGE = 200
 
 
-# -------------------------------------------------
+# ------------------------------------------------------
 # Helpers
-# -------------------------------------------------
+# ------------------------------------------------------
 def iso(dt):
     if not dt:
         return None
@@ -28,28 +29,36 @@ def iso(dt):
 
 
 def parse_datetime(val):
-    """Accept ISO string or ms timestamp"""
-    if isinstance(val, (int, float)):
-        # milliseconds → seconds
-        if val > 1e10:
-            return datetime.utcfromtimestamp(val / 1000.0)
-        return datetime.utcfromtimestamp(val)
+    """Accepts ISO string OR timestamp (seconds/ms). Returns Python datetime."""
+    if not val:
+        return None
+
+    if isinstance(val, (int, float)):  # timestamp
+        v = int(val)
+        if v > 1e10:  # milliseconds
+            return datetime.utcfromtimestamp(v / 1000)
+        return datetime.utcfromtimestamp(v)
 
     if isinstance(val, str):
+        s = val.strip()
+
+        # ISO → Python
         try:
-            if val.endswith("Z"):
-                val = val[:-1] + "+00:00"
-            dt = datetime.fromisoformat(val)
-            return dt.replace(tzinfo=None)
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo:
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt
         except:
             pass
 
-        # try numeric string
+        # numeric string
         try:
-            num = int(val)
-            if num > 1e10:
-                return datetime.utcfromtimestamp(num / 1000.0)
-            return datetime.utcfromtimestamp(num)
+            v = int(s)
+            if v > 1e10:
+                return datetime.utcfromtimestamp(v / 1000)
+            return datetime.utcfromtimestamp(v)
         except:
             return None
 
@@ -66,106 +75,88 @@ def admin_required(fn):
 
 
 def paginate(query):
-    page = max(1, request.args.get("page", default=1, type=int))
-    per_page = request.args.get("per_page", default=DEFAULT_PER_PAGE, type=int)
-    per_page = max(1, min(per_page, MAX_PER_PAGE))
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = min(MAX_PER_PAGE, max(1, int(request.args.get("per_page", DEFAULT_PER_PAGE))))
 
     pag = query.paginate(page=page, per_page=per_page, error_out=False)
 
     return pag.items, {
         "page": pag.page,
-        "per_page": pag.per_page,
-        "total": pag.total,
         "pages": pag.pages,
+        "total": pag.total,
         "has_next": pag.has_next,
-        "has_prev": pag.has_prev,
     }
 
 
-# -------------------------------------------------
-# 1) SYNC CALL HISTORY (Mobile → Server)
-# -------------------------------------------------
+# ------------------------------------------------------
+# 1) MOBILE SYNC — FIXED TIMESTAMP ISSUE
+# ------------------------------------------------------
 @bp.route("/sync", methods=["POST"])
 @jwt_required()
 def sync_call_history():
     try:
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
-
-        if not user or not user.is_active:
-            return jsonify({"error": "User not found or inactive"}), 403
+        if not user:
+            return jsonify({"error": "User not found"}), 404
 
         payload = request.get_json(silent=True) or {}
-        call_list = payload.get("call_history", [])
+        entries = payload.get("call_history", [])
 
-        if not isinstance(call_list, list):
-            return jsonify({"error": "'call_history' must be a list"}), 400
+        if not isinstance(entries, list):
+            return jsonify({"error": "call_history must be a list"}), 400
 
         saved = 0
         errors = []
 
-        for entry in call_list:
-            # -------------------------
-            # Extract correct fields
-            # -------------------------
-            ts_str = entry.get("timestamp")
+        for entry in entries:
             phone_number = entry.get("phone_number")
+            raw_ts = entry.get("timestamp")
 
-            if not ts_str or not phone_number:
+            if not phone_number or raw_ts is None:
                 errors.append({"entry": entry, "error": "Missing timestamp or phone_number"})
                 continue
 
-            # parse datetime
-            ts = parse_datetime(ts_str)
+            ts = parse_datetime(raw_ts)
             if not ts:
                 errors.append({"entry": entry, "error": "Invalid timestamp"})
                 continue
 
+            # Normalize datetime (remove microseconds)
             ts_norm = ts.replace(microsecond=0)
 
-            formatted = entry.get("formatted_number")
-            call_type = entry.get("call_type")
-            duration = entry.get("duration", 0)
-            contact_name = entry.get("contact_name")
+            record_date = ts_norm.date()
 
-            try:
-                duration = int(duration)
-            except:
-                duration = 0
-
-            # -------------------------
-            # Duplicate check
-            # -------------------------
-            exists = CallHistory.query.filter_by(
-                user_id=user_id,
-                phone_number=phone_number,
-                call_type=call_type,
-                duration=duration,
-                timestamp=ts_norm
+            exists = CallHistory.query.filter(
+                CallHistory.user_id == user_id,
+                CallHistory.phone_number == phone_number,
+                CallHistory.call_type == entry.get("call_type"),
+                CallHistory.duration == int(entry.get("duration", 0)),
+                (CallHistory.timestamp.cast(db.Date) == record_date)  # SAFE FILTER
             ).first()
 
             if exists:
                 continue
 
-            # -------------------------
-            # Save record
-            # -------------------------
             rec = CallHistory(
                 user_id=user_id,
                 phone_number=phone_number,
-                formatted_number=formatted,
-                call_type=call_type,
+                formatted_number=entry.get("formatted_number"),
+                call_type=entry.get("call_type"),
+                duration=int(entry.get("duration", 0)),
+                contact_name=entry.get("contact_name"),
                 timestamp=ts_norm,
-                duration=duration,
-                contact_name=contact_name,
             )
 
             db.session.add(rec)
             saved += 1
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return jsonify({"error": "DB commit failed", "detail": str(e)}), 500
 
-        # Update user sync time
         user.last_sync = datetime.utcnow()
         db.session.add(user)
         db.session.commit()
@@ -178,58 +169,34 @@ def sync_call_history():
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.exception("Call history sync failed")
-        return jsonify({"error": "Internal server error", "detail": str(e)}), 500
+        current_app.logger.exception("call_history sync error")
+        return jsonify({"error": "internal", "detail": str(e)}), 500
 
 
-
-# -------------------------------------------------
-# 3) ADMIN — USER CALL HISTORY
-# -------------------------------------------------
-@bp.route("/admin/<int:user_id>", methods=["GET"])
+# ------------------------------------------------------
+# 2) USER → MY CALL HISTORY
+# ------------------------------------------------------
+@bp.route("/my", methods=["GET"])
 @jwt_required()
-@admin_required
-def admin_user_call_history(user_id):
+def my_calls():
     try:
-        admin_id = int(get_jwt_identity())
+        user_id = int(get_jwt_identity())
+        days = int(request.args.get("days", 30))
 
-        user = User.query.get(user_id)
-        if not user:
-            return jsonify({"error": "User not found"}), 404
+        from_date = datetime.utcnow() - timedelta(days=days)
 
-        if user.admin_id != admin_id:
-            return jsonify({"error": "Unauthorized"}), 403
-
-        days = request.args.get("days", 30, type=int)
-        call_type = request.args.get("call_type", "all")
-
-        from_date = datetime.utcnow() - timedelta(days=max(days, 0))
-
-        q = CallHistory.query.filter(CallHistory.user_id == user_id)
-        q = q.filter(CallHistory.created_at >= from_date)
-
-        if call_type != "all":
-            q = q.filter(CallHistory.call_type == call_type)
-
-        q = q.order_by(CallHistory.timestamp.desc())
+        q = CallHistory.query.filter(
+            CallHistory.user_id == user_id,
+            CallHistory.created_at >= from_date
+        ).order_by(CallHistory.timestamp.desc())
 
         items, meta = paginate(q)
 
-        total_calls = q.count()
-        total_duration = db.session.query(func.coalesce(func.sum(CallHistory.duration), 0)).filter(
-            CallHistory.user_id == user_id
-        ).scalar()
-
         return jsonify({
             "user_id": user_id,
-            "user_name": user.name,
-            "total_calls": total_calls,
-            "total_duration_seconds": int(total_duration),
             "call_history": [r.to_dict() for r in items],
             "meta": meta
         }), 200
 
     except Exception as e:
-        current_app.logger.exception("Failed admin_user_call_history")
         return jsonify({"error": str(e)}), 500
-
