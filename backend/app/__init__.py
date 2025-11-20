@@ -40,6 +40,7 @@ def create_app(config_class=Config):
     from app.routes.admin_attendance import bp as admin_attendance_bp
     from app.routes.admin_call_analytics import bp as admin_call_analytics_bp
     from app.routes.admin_call_analytics import bp as call_analytics_bp
+    from app.routes.admin_performance import bp as admin_performance_bp
 
     app.register_blueprint(super_admin_bp)
     app.register_blueprint(admin_bp)
@@ -50,6 +51,7 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_call_history_bp)   # ✅ Register correctly
     app.register_blueprint(admin_attendance_bp)
     app.register_blueprint(admin_call_analytics_bp)
+    app.register_blueprint(admin_performance_bp)
 
     # ---------------------------
     # INITIAL DATABASE SETUP
