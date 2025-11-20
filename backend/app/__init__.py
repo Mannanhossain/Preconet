@@ -78,23 +78,24 @@ def create_app(config_class=Config):
         except Exception as e:
             print("⚠ formatted_number error:", e)
 
-        # 4. Convert timestamp BIGINT → TIMESTAMP
+        # 4. Convert ONLY bigint timestamps → TIMESTAMP
+        print("🔧 Converting BIGINT timestamps → TIMESTAMP...")
+
         try:
             db.session.execute(text("""
-                ALTER TABLE call_history
-                ALTER COLUMN timestamp
-                TYPE TIMESTAMP
-                USING to_timestamp(CAST(timestamp AS BIGINT));
+                UPDATE call_history
+                SET timestamp = to_timestamp(timestamp::bigint / 1000)
+                WHERE timestamp ~ '^[0-9]+$';
             """))
             db.session.commit()
-            print("✔ timestamp successfully converted to TIMESTAMP")
-        except Exception:
-            print("ℹ timestamp already correct OR conversion skipped")
+            print("✔ BIGINT timestamps converted")
+        except Exception as e:
+            print("⚠ bigint → timestamp conversion skipped:", e)
 
         print("✅ CALL HISTORY AUTO-FIX COMPLETE\n")
 
     # ------------------------------------------------
-    # REGISTER BLUEPRINTS
+    # REGISTER ROUTES / BLUEPRINTS
     # ------------------------------------------------
     from app.routes.super_admin import bp as super_admin_bp
     from app.routes.admin import bp as admin_bp
@@ -122,12 +123,12 @@ def create_app(config_class=Config):
         tables = inspector.get_table_names()
 
         if not tables:
-            print("⚙ No tables, creating...")
+            print("⚙ No tables found — creating...")
             db.create_all()
             print("✅ Tables created")
 
         if not SuperAdmin.query.first():
-            print("⚙ Creating default super admin...")
+            print("⚙ Creating default Super Admin…")
             sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
             sa.set_password("admin123")
             db.session.add(sa)
@@ -151,7 +152,7 @@ def create_app(config_class=Config):
     def health():
         return jsonify({"status": "running", "database": "connected"}), 200
 
-    # ---- SUPER ADMIN PANEL ----
+    # SUPER ADMIN PANEL
     @app.route("/super_admin/login.html")
     def super_admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
@@ -160,7 +161,7 @@ def create_app(config_class=Config):
     def super_admin_static(filename):
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
 
-    # ---- ADMIN PANEL ----
+    # ADMIN PANEL
     @app.route("/admin/login.html")
     def admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
