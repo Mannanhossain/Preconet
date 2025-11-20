@@ -1,5 +1,4 @@
 # app/routes/call_history.py
-
 import uuid
 from datetime import datetime, timezone, timedelta
 from functools import wraps
@@ -7,7 +6,6 @@ from functools import wraps
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import func
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.models import db, User, CallHistory
 
@@ -24,43 +22,34 @@ def iso(dt):
     if not dt:
         return None
     try:
-        if dt.tzinfo:
-            return dt.astimezone(timezone.utc).isoformat()
         return dt.replace(tzinfo=timezone.utc).isoformat()
     except:
         return str(dt)
 
 
 def parse_datetime(val):
-    if val is None:
-        return None
-
-    # numeric timestamp
+    """Accept ISO string or ms timestamp"""
     if isinstance(val, (int, float)):
-        v = int(val)
-        if v > 1e10:  # ms
-            return datetime.fromtimestamp(v / 1000.0, tz=timezone.utc).replace(tzinfo=None)
-        return datetime.fromtimestamp(v, tz=timezone.utc).replace(tzinfo=None)
+        # milliseconds → seconds
+        if val > 1e10:
+            return datetime.utcfromtimestamp(val / 1000.0)
+        return datetime.utcfromtimestamp(val)
 
-    # string timestamp
     if isinstance(val, str):
-        s = val.strip()
         try:
-            if s.endswith("Z"):
-                s = s[:-1] + "+00:00"
-            dt = datetime.fromisoformat(s)
-            if dt.tzinfo:
-                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
-            return dt
+            if val.endswith("Z"):
+                val = val[:-1] + "+00:00"
+            dt = datetime.fromisoformat(val)
+            return dt.replace(tzinfo=None)
         except:
             pass
 
-        # maybe "1699988833000"
+        # try numeric string
         try:
-            v = int(s)
-            if v > 1e10:
-                return datetime.fromtimestamp(v / 1000.0, tz=timezone.utc).replace(tzinfo=None)
-            return datetime.fromtimestamp(v, tz=timezone.utc).replace(tzinfo=None)
+            num = int(val)
+            if num > 1e10:
+                return datetime.utcfromtimestamp(num / 1000.0)
+            return datetime.utcfromtimestamp(num)
         except:
             return None
 
@@ -77,16 +66,8 @@ def admin_required(fn):
 
 
 def paginate(query):
-    try:
-        page = max(1, int(request.args.get("page", 1)))
-    except:
-        page = 1
-
-    try:
-        per_page = int(request.args.get("per_page", DEFAULT_PER_PAGE))
-    except:
-        per_page = DEFAULT_PER_PAGE
-
+    page = max(1, request.args.get("page", default=1, type=int))
+    per_page = request.args.get("per_page", default=DEFAULT_PER_PAGE, type=int)
     per_page = max(1, min(per_page, MAX_PER_PAGE))
 
     pag = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -102,7 +83,7 @@ def paginate(query):
 
 
 # -------------------------------------------------
-# 1) SYNC CALL HISTORY
+# 1) SYNC CALL HISTORY (Mobile → Server)
 # -------------------------------------------------
 @bp.route("/sync", methods=["POST"])
 @jwt_required()
@@ -124,14 +105,8 @@ def sync_call_history():
         errors = []
 
         for entry in call_list:
-
-            # Accept both (phone_number or number)
-            phone_number = entry.get("phone_number") or entry.get("number")
-
-            # Accept both (contact_name or name)
-            contact_name = entry.get("contact_name") or entry.get("name") or ""
-
             raw_ts = entry.get("timestamp")
+            phone_number = entry.get("number")
 
             if not raw_ts or not phone_number:
                 errors.append({"entry": entry, "error": "Missing timestamp or phone_number"})
@@ -139,27 +114,31 @@ def sync_call_history():
 
             ts = parse_datetime(raw_ts)
             if not ts:
-                errors.append({"entry": entry, "error": "Invalid timestamp"})
+                errors.append({"entry": entry, "error": "Invalid timestamp format"})
                 continue
 
             ts_norm = ts.replace(microsecond=0)
 
             formatted = entry.get("formatted_number") or ""
             call_type = entry.get("call_type") or "unknown"
+            contact_name = entry.get("name") or ""
 
-            duration = entry.get("duration", 0)
+            # Duration must be integer
             try:
-                duration = int(duration)
+                duration = int(entry.get("duration", 0))
             except:
                 duration = 0
 
-            # Duplicate detection
-            exists = CallHistory.query.filter_by(
-                user_id=user_id,
-                phone_number=phone_number,
-                timestamp=ts_norm,
-                call_type=call_type,
-                duration=duration
+            # -------------------------------------------------
+            # 🔥 FIXED DUPLICATE DETECTION (NO DB TYPE ERRORS)
+            # Uses DATE(timestamp) instead of full comparison
+            # -------------------------------------------------
+            exists = CallHistory.query.filter(
+                CallHistory.user_id == user_id,
+                CallHistory.phone_number == phone_number,
+                CallHistory.call_type == call_type,
+                CallHistory.duration == duration,
+                func.date(CallHistory.timestamp) == ts_norm.date()
             ).first()
 
             if exists:
@@ -172,19 +151,15 @@ def sync_call_history():
                 call_type=call_type,
                 timestamp=ts_norm,
                 duration=duration,
-                contact_name=contact_name,
+                contact_name=contact_name
             )
 
             db.session.add(rec)
             saved += 1
 
-        try:
-            db.session.commit()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            return jsonify({"error": "DB commit failed", "detail": str(e)}), 500
+        db.session.commit()
 
-        # Update sync time
+        # Update user's last sync time
         user.last_sync = datetime.utcnow()
         db.session.add(user)
         db.session.commit()
@@ -202,13 +177,14 @@ def sync_call_history():
 
 
 # -------------------------------------------------
-# 2) GET MY CALL HISTORY
+# 2) USER — MY CALL HISTORY
 # -------------------------------------------------
 @bp.route("/my", methods=["GET"])
 @jwt_required()
 def my_call_history():
     try:
         user_id = int(get_jwt_identity())
+
         days = request.args.get("days", 30, type=int)
         call_type = request.args.get("call_type", "all")
 
@@ -224,21 +200,10 @@ def my_call_history():
 
         items, meta = paginate(q)
 
-        data = [{
-            "id": r.id,
-            "phone_number": r.phone_number,
-            "formatted_number": r.formatted_number,
-            "call_type": r.call_type,
-            "timestamp": iso(r.timestamp),
-            "duration": r.duration,
-            "contact_name": r.contact_name,
-            "created_at": iso(r.created_at),
-        } for r in items]
-
         return jsonify({
             "user_id": user_id,
             "total": meta["total"],
-            "call_history": data,
+            "call_history": [r.to_dict() for r in items],
             "meta": meta
         }), 200
 
@@ -248,7 +213,7 @@ def my_call_history():
 
 
 # -------------------------------------------------
-# 3) ADMIN — VIEW USER CALL HISTORY
+# 3) ADMIN — USER CALL HISTORY
 # -------------------------------------------------
 @bp.route("/admin/<int:user_id>", methods=["GET"])
 @jwt_required()
@@ -256,8 +221,8 @@ def my_call_history():
 def admin_user_call_history(user_id):
     try:
         admin_id = int(get_jwt_identity())
-        user = User.query.get(user_id)
 
+        user = User.query.get(user_id)
         if not user:
             return jsonify({"error": "User not found"}), 404
 
@@ -279,25 +244,9 @@ def admin_user_call_history(user_id):
 
         items, meta = paginate(q)
 
-        data = [{
-            "id": r.id,
-            "phone_number": r.phone_number,
-            "formatted_number": r.formatted_number,
-            "call_type": r.call_type,
-            "timestamp": iso(r.timestamp),
-            "duration": r.duration,
-            "contact_name": r.contact_name,
-            "created_at": iso(r.created_at),
-        } for r in items]
-
-        total_calls = db.session.query(func.count(CallHistory.id)).filter(
-            CallHistory.user_id == user_id,
-            CallHistory.created_at >= from_date
-        ).scalar()
-
+        total_calls = q.count()
         total_duration = db.session.query(func.coalesce(func.sum(CallHistory.duration), 0)).filter(
-            CallHistory.user_id == user_id,
-            CallHistory.created_at >= from_date
+            CallHistory.user_id == user_id
         ).scalar()
 
         return jsonify({
@@ -305,7 +254,7 @@ def admin_user_call_history(user_id):
             "user_name": user.name,
             "total_calls": total_calls,
             "total_duration_seconds": int(total_duration),
-            "call_history": data,
+            "call_history": [r.to_dict() for r in items],
             "meta": meta
         }), 200
 
