@@ -18,21 +18,23 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # ------------------------------------------
+    # ------------------------------------------------
     # INITIALIZE EXTENSIONS
-    # ------------------------------------------
+    # ------------------------------------------------
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
     CORS(app)
 
-    # ==========================================================
-    # 🔧 AUTO-FIX DATABASE (Safe for PostgreSQL + Render)
-    # ==========================================================
+    # ------------------------------------------------
+    # AUTO-FIX DATABASE (RENDER-SAFE)
+    # ------------------------------------------------
     with app.app_context():
 
-        # ------------------------ ATTENDANCE FIX -------------------------
+        print("\n🔧 Running DB Auto-Fix...")
+
+        # ------------------ ATTENDANCE FIX ------------------
         try:
             db.session.execute(text("""
                 ALTER TABLE attendances
@@ -41,32 +43,32 @@ def create_app(config_class=Config):
             db.session.commit()
             print("✔ attendance.external_id ensured")
         except Exception as e:
-            print("⚠ attendance fix error:", e)
+            print("⚠ Attendance fix error:", e)
 
-        # ------------------------ CALL HISTORY FIX -------------------------
-        print("\n🔧 Fixing call_history table...")
+        # ------------------ CALL HISTORY FIX ------------------
+        print("\n🔧 Checking call_history table...")
 
-        # Rename number → phone_number
+        # 1. Rename number → phone_number
         try:
             db.session.execute(text("""
-                ALTER TABLE call_history 
+                ALTER TABLE call_history
                 RENAME COLUMN number TO phone_number;
             """))
             print("✔ Renamed number → phone_number")
         except Exception:
             print("ℹ number already renamed or missing")
 
-        # Rename name → contact_name
+        # 2. Rename name → contact_name
         try:
             db.session.execute(text("""
-                ALTER TABLE call_history 
+                ALTER TABLE call_history
                 RENAME COLUMN name TO contact_name;
             """))
             print("✔ Renamed name → contact_name")
         except Exception:
             print("ℹ name already renamed or missing")
 
-        # Add formatted_number column
+        # 3. Add formatted_number column
         try:
             db.session.execute(text("""
                 ALTER TABLE call_history
@@ -74,27 +76,26 @@ def create_app(config_class=Config):
             """))
             print("✔ formatted_number ensured")
         except Exception as e:
-            print("⚠ formatted_number fix error:", e)
+            print("⚠ formatted_number error:", e)
 
-        # ------------------------ TIMESTAMP FIX -------------------------
-        print("🔧 Checking timestamp column type...")
-
+        # 4. Convert timestamp BIGINT → TIMESTAMP
         try:
             db.session.execute(text("""
                 ALTER TABLE call_history
                 ALTER COLUMN timestamp
-                TYPE TIMESTAMP USING to_timestamp(CAST(timestamp AS BIGINT));
+                TYPE TIMESTAMP
+                USING to_timestamp(CAST(timestamp AS BIGINT));
             """))
             db.session.commit()
-            print("✔ call_history.timestamp converted to TIMESTAMP")
+            print("✔ timestamp successfully converted to TIMESTAMP")
         except Exception:
-            print("ℹ timestamp already converted")
+            print("ℹ timestamp already correct OR conversion skipped")
 
-        print("✅ CALL HISTORY FIX COMPLETE\n")
+        print("✅ CALL HISTORY AUTO-FIX COMPLETE\n")
 
-    # ------------------------------------------
+    # ------------------------------------------------
     # REGISTER BLUEPRINTS
-    # ------------------------------------------
+    # ------------------------------------------------
     from app.routes.super_admin import bp as super_admin_bp
     from app.routes.admin import bp as admin_bp
     from app.routes.users import bp as users_bp
@@ -113,17 +114,17 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_call_history_bp)
     app.register_blueprint(admin_attendance_bp)
 
-    # ------------------------------------------
+    # ------------------------------------------------
     # INITIAL DATABASE SETUP
-    # ------------------------------------------
+    # ------------------------------------------------
     with app.app_context():
         inspector = inspect(db.engine)
         tables = inspector.get_table_names()
 
         if not tables:
-            print("⚙ No tables found — creating database...")
+            print("⚙ No tables, creating...")
             db.create_all()
-            print("✅ Database created")
+            print("✅ Tables created")
 
         if not SuperAdmin.query.first():
             print("⚙ Creating default super admin...")
@@ -131,23 +132,26 @@ def create_app(config_class=Config):
             sa.set_password("admin123")
             db.session.add(sa)
             db.session.commit()
-            print("✅ Default SuperAdmin set")
+            print("✅ Default SuperAdmin created")
 
-    # ------------------------------------------
-    # FRONTEND ROUTING
-    # ------------------------------------------
+    # ------------------------------------------------
+    # FRONTEND ROUTES
+    # ------------------------------------------------
     FRONTEND_PATH = os.path.abspath(os.path.join(os.getcwd(), "frontend"))
     print("📁 FRONTEND PATH:", FRONTEND_PATH)
 
     @app.route("/")
     def home():
-        return jsonify({"status": "running", "message": "Call Manager Pro Backend is LIVE!"})
+        return jsonify({
+            "status": "running",
+            "message": "Call Manager Pro Backend is LIVE!"
+        })
 
     @app.route("/api/health")
     def health():
         return jsonify({"status": "running", "database": "connected"}), 200
 
-    # SUPER ADMIN PANEL
+    # ---- SUPER ADMIN PANEL ----
     @app.route("/super_admin/login.html")
     def super_admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
@@ -156,7 +160,7 @@ def create_app(config_class=Config):
     def super_admin_static(filename):
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
 
-    # ADMIN PANEL
+    # ---- ADMIN PANEL ----
     @app.route("/admin/login.html")
     def admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
