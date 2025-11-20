@@ -27,19 +27,55 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     CORS(app)
 
-    # ------------------------------------------
-    # 🔧 AUTO-FIX DATABASE (Render Safe)
-    # ------------------------------------------
+    # ==========================================================
+    # 🔧 AUTO-FIX DATABASE COLUMNS (Render Safe)
+    # ==========================================================
     with app.app_context():
+
+        # ------------ ATTENDANCE FIX ------------
+        try:
+            db.session.execute(text("""
+                ALTER TABLE attendances
+                ADD COLUMN IF NOT EXISTS external_id VARCHAR(64);
+            """))
+            db.session.commit()
+            print("✔ Attendance column 'external_id' ensured")
+        except Exception as e:
+            print("⚠ Attendance auto-fix error:", e)
+
+        # ------------ CALL HISTORY FIX ------------
+        print("\n🔧 Checking call_history table...")
+
+        # Rename old number → phone_number
         try:
             db.session.execute(text(
-                "ALTER TABLE attendances "
-                "ADD COLUMN IF NOT EXISTS external_id VARCHAR(64);"
+                "ALTER TABLE call_history RENAME COLUMN number TO phone_number;"
             ))
-            db.session.commit()
-            print("🔧 AUTO-FIX: external_id column ensured.")
+            print("✔ Renamed number → phone_number")
+        except Exception:
+            print("ℹ number already renamed / does not exist")
+
+        # Rename old name → contact_name
+        try:
+            db.session.execute(text(
+                "ALTER TABLE call_history RENAME COLUMN name TO contact_name;"
+            ))
+            print("✔ Renamed name → contact_name")
+        except Exception:
+            print("ℹ name already renamed / does not exist")
+
+        # Add formatted_number if missing
+        try:
+            db.session.execute(text("""
+                ALTER TABLE call_history 
+                ADD COLUMN IF NOT EXISTS formatted_number VARCHAR(100);
+            """))
+            print("✔ Added formatted_number")
         except Exception as e:
-            print("⚠️ AUTO-FIX ERROR:", e)
+            print("⚠ formatted_number add failed:", e)
+
+        db.session.commit()
+        print("✅ CALL HISTORY AUTO-FIX DONE\n")
 
     # ------------------------------------------
     # REGISTER BLUEPRINTS
@@ -63,27 +99,27 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_attendance_bp)
 
     # ------------------------------------------
-    # DATABASE INITIALIZATION + DEFAULT SUPER ADMIN
+    # INITIAL DB SETUP + DEFAULT SUPER ADMIN
     # ------------------------------------------
     with app.app_context():
         inspector = inspect(db.engine)
         tables = inspector.get_table_names()
 
         if not tables:
-            print("⚙️ No tables detected → Creating DB...")
+            print("⚙ No tables detected → Creating DB...")
             db.create_all()
-            print("✅ Database created")
+            print("✅ DB created successfully")
 
         if not SuperAdmin.query.first():
-            print("⚙️ Creating default super admin...")
+            print("⚙ Creating default SuperAdmin…")
             sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
             sa.set_password("admin123")
             db.session.add(sa)
             db.session.commit()
-            print("✅ Default SuperAdmin READY")
+            print("✅ Default SuperAdmin CREATED")
 
     # ------------------------------------------
-    # FRONTEND ROUTES
+    # FRONTEND ROUTING
     # ------------------------------------------
     FRONTEND_PATH = os.path.abspath(os.path.join(os.getcwd(), "frontend"))
     print("📁 FRONTEND PATH:", FRONTEND_PATH)
@@ -99,7 +135,7 @@ def create_app(config_class=Config):
     def health():
         return jsonify({"status": "running", "database": "connected"}), 200
 
-    # SUPER ADMIN PANEL
+    # -------- SUPER ADMIN PANEL --------
     @app.route("/super_admin/login.html")
     def super_admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
@@ -108,7 +144,7 @@ def create_app(config_class=Config):
     def super_admin_static(filename):
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
 
-    # ADMIN PANEL
+    # -------- ADMIN PANEL --------
     @app.route("/admin/login.html")
     def admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
