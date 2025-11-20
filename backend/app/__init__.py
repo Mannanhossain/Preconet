@@ -28,54 +28,69 @@ def create_app(config_class=Config):
     CORS(app)
 
     # ==========================================================
-    # 🔧 AUTO-FIX DATABASE COLUMNS (Render Safe)
+    # 🔧 AUTO-FIX DATABASE (Safe for PostgreSQL + Render)
     # ==========================================================
     with app.app_context():
 
-        # ------------ ATTENDANCE FIX ------------
+        # ------------------------ ATTENDANCE FIX -------------------------
         try:
             db.session.execute(text("""
                 ALTER TABLE attendances
                 ADD COLUMN IF NOT EXISTS external_id VARCHAR(64);
             """))
             db.session.commit()
-            print("✔ Attendance column 'external_id' ensured")
+            print("✔ attendance.external_id ensured")
         except Exception as e:
-            print("⚠ Attendance auto-fix error:", e)
+            print("⚠ attendance fix error:", e)
 
-        # ------------ CALL HISTORY FIX ------------
-        print("\n🔧 Checking call_history table...")
+        # ------------------------ CALL HISTORY FIX -------------------------
+        print("\n🔧 Fixing call_history table...")
 
-        # Rename old number → phone_number
-        try:
-            db.session.execute(text(
-                "ALTER TABLE call_history RENAME COLUMN number TO phone_number;"
-            ))
-            print("✔ Renamed number → phone_number")
-        except Exception:
-            print("ℹ number already renamed / does not exist")
-
-        # Rename old name → contact_name
-        try:
-            db.session.execute(text(
-                "ALTER TABLE call_history RENAME COLUMN name TO contact_name;"
-            ))
-            print("✔ Renamed name → contact_name")
-        except Exception:
-            print("ℹ name already renamed / does not exist")
-
-        # Add formatted_number if missing
+        # Rename number → phone_number
         try:
             db.session.execute(text("""
                 ALTER TABLE call_history 
+                RENAME COLUMN number TO phone_number;
+            """))
+            print("✔ Renamed number → phone_number")
+        except Exception:
+            print("ℹ number already renamed or missing")
+
+        # Rename name → contact_name
+        try:
+            db.session.execute(text("""
+                ALTER TABLE call_history 
+                RENAME COLUMN name TO contact_name;
+            """))
+            print("✔ Renamed name → contact_name")
+        except Exception:
+            print("ℹ name already renamed or missing")
+
+        # Add formatted_number column
+        try:
+            db.session.execute(text("""
+                ALTER TABLE call_history
                 ADD COLUMN IF NOT EXISTS formatted_number VARCHAR(100);
             """))
-            print("✔ Added formatted_number")
+            print("✔ formatted_number ensured")
         except Exception as e:
-            print("⚠ formatted_number add failed:", e)
+            print("⚠ formatted_number fix error:", e)
 
-        db.session.commit()
-        print("✅ CALL HISTORY AUTO-FIX DONE\n")
+        # ------------------------ TIMESTAMP FIX -------------------------
+        print("🔧 Checking timestamp column type...")
+
+        try:
+            db.session.execute(text("""
+                ALTER TABLE call_history
+                ALTER COLUMN timestamp
+                TYPE TIMESTAMP USING to_timestamp(CAST(timestamp AS BIGINT));
+            """))
+            db.session.commit()
+            print("✔ call_history.timestamp converted to TIMESTAMP")
+        except Exception:
+            print("ℹ timestamp already converted")
+
+        print("✅ CALL HISTORY FIX COMPLETE\n")
 
     # ------------------------------------------
     # REGISTER BLUEPRINTS
@@ -99,24 +114,24 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_attendance_bp)
 
     # ------------------------------------------
-    # INITIAL DB SETUP + DEFAULT SUPER ADMIN
+    # INITIAL DATABASE SETUP
     # ------------------------------------------
     with app.app_context():
         inspector = inspect(db.engine)
         tables = inspector.get_table_names()
 
         if not tables:
-            print("⚙ No tables detected → Creating DB...")
+            print("⚙ No tables found — creating database...")
             db.create_all()
-            print("✅ DB created successfully")
+            print("✅ Database created")
 
         if not SuperAdmin.query.first():
-            print("⚙ Creating default SuperAdmin…")
+            print("⚙ Creating default super admin...")
             sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
             sa.set_password("admin123")
             db.session.add(sa)
             db.session.commit()
-            print("✅ Default SuperAdmin CREATED")
+            print("✅ Default SuperAdmin set")
 
     # ------------------------------------------
     # FRONTEND ROUTING
@@ -126,16 +141,13 @@ def create_app(config_class=Config):
 
     @app.route("/")
     def home():
-        return jsonify({
-            "status": "running",
-            "message": "Call Manager Pro Backend is LIVE!"
-        })
+        return jsonify({"status": "running", "message": "Call Manager Pro Backend is LIVE!"})
 
     @app.route("/api/health")
     def health():
         return jsonify({"status": "running", "database": "connected"}), 200
 
-    # -------- SUPER ADMIN PANEL --------
+    # SUPER ADMIN PANEL
     @app.route("/super_admin/login.html")
     def super_admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
@@ -144,7 +156,7 @@ def create_app(config_class=Config):
     def super_admin_static(filename):
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
 
-    # -------- ADMIN PANEL --------
+    # ADMIN PANEL
     @app.route("/admin/login.html")
     def admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
