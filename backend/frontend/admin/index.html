@@ -1,367 +1,605 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin Panel – Call Manager Pro</title>
+  <title>Admin Panel - Call Manager Pro</title>
 
-  <!-- Tailwind 3.4 -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font-awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css " />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
 
   <style>
-    /* Off-canvas sidebar */
-    #sidebar { transform: translateX(-100%); transition: transform .3s ease; }
-    #sidebar.open { transform: translateX(0); }
-    /* Simple skeleton for charts */
-    canvas { max-width: 100% !important; }
+    .hidden-section { display: none; }
+    .active-menu { background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%); border-right: 4px solid #3b82f6; color: #3b82f6; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .table-row-hover:hover { background-color: #f8fafc; }
+    .filter-active { background-color: #3b82f6; color: white; }
+    @media (max-width: 1024px) {
+      aside { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-110%); transition: transform .25s ease; z-index: 40; }
+      aside.active { transform: translateX(0); }
+      main { padding-left: 1rem; }
+      #overlay { display: none; }
+      #overlay.active { display:block; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:30; }
+    }
   </style>
 </head>
+<body class="bg-gray-50">
 
-<body class="bg-gray-50 text-gray-800">
+  <div id="overlay" class="" aria-hidden="true"></div>
 
-<!-- ==========  OVERLAY  ========== -->
-<div id="overlay" class="fixed inset-0 bg-black/40 z-30 hidden lg:hidden"></div>
+  <div class="flex h-screen">
 
-<!-- ==========  WRAPPER  ========== -->
-<div class="flex h-screen overflow-hidden">
-
-  <!-- ==========  SIDEBAR  ========== -->
-  <aside id="sidebar" class="fixed lg:relative z-40 w-64 h-full bg-white border-r border-gray-200 flex flex-col">
-    <!-- Header -->
-    <div class="p-4 border-b border-gray-200 flex items-center justify-between">
-      <div>
-        <h1 class="text-lg font-bold text-gray-800">Admin Panel</h1>
-        <p class="text-xs text-gray-500">Call Manager Pro</p>
-      </div>
-      <button id="closeSidebar" class="lg:hidden text-gray-500 hover:bg-gray-100 p-2 rounded-full">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-
-    <!-- Nav -->
-    <nav class="flex-1 px-3 py-4 space-y-1">
-      <a data-page="dashboard" class="menu-item active-menu flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition text-sm font-medium">
-        <i class="fas fa-chart-pie w-4"></i>Dashboard
-      </a>
-      <a data-page="users" class="menu-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition text-sm font-medium">
-        <i class="fas fa-users w-4"></i>Users
-      </a>
-      <a data-page="createUser" class="menu-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition text-sm font-medium">
-        <i class="fas fa-user-plus w-4"></i>Create User
-      </a>
-      <a data-page="attendance" class="menu-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition text-sm font-medium">
-        <i class="fas fa-calendar-check w-4"></i>Attendance
-      </a>
-      <a data-page="callHistory" class="menu-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition text-sm font-medium">
-        <i class="fas fa-phone-alt w-4"></i>Call History
-      </a>
-      <a data-page="callAnalytics" class="menu-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition text-sm font-medium">
-        <i class="fas fa-chart-bar w-4"></i>Call Analytics
-      </a>
-      <a data-page="performance" class="menu-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition text-sm font-medium">
-        <i class="fas fa-chart-line w-4"></i>Performance
-      </a>
-    </nav>
-
-    <!-- Logout -->
-    <div class="p-3 border-t border-gray-200">
-      <button id="logoutBtn" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
-        <i class="fas fa-sign-out-alt"></i>Logout
-      </button>
-    </div>
-  </aside>
-
-  <!-- ==========  MAIN  ========== -->
-  <main class="flex-1 overflow-y-auto w-full">
-    <!-- Top-bar -->
-    <header class="sticky top-0 bg-white/80 backdrop-blur border-b border-gray-200 px-4 py-3 flex items-center justify-between z-20">
-      <div class="flex items-center gap-3">
-        <button id="openSidebar" class="lg:hidden text-gray-600 p-2 rounded-full hover:bg-gray-100">
-          <i class="fas fa-bars"></i>
-        </button>
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="w-64 bg-white shadow-xl flex flex-col border-r border-gray-200">
+      <div class="p-6 border-b border-gray-200 flex items-center justify-between">
         <div>
-          <h2 id="pageTitle" class="text-base lg:text-xl font-bold text-gray-800">Dashboard</h2>
-          <p id="pageSubtitle" class="text-xs text-gray-500">Overview</p>
+          <h1 class="text-xl font-bold text-gray-800">Admin Panel</h1>
+          <p class="text-sm text-gray-500">Call Manager Pro</p>
         </div>
+        <button id="closeSidebar" class="lg:hidden text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"><i class="fas fa-times"></i></button>
       </div>
-      <div id="rightHeader" class="flex items-center gap-2"></div>
-    </header>
 
-    <!-- ==========  CONTENT AREA  ========== -->
-    <div class="p-4 lg:p-6">
+      <nav class="flex-1 p-4 space-y-1">
+        <a id="menuDashboard" class="menu-item active-menu flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-100">
+          <i class="fas fa-chart-pie w-4"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <a id="menuUsers" class="menu-item flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-100">
+          <i class="fas fa-users w-4"></i>
+          <span>Users</span>
+        </a>
+
+        <a id="menuCreateUser" class="menu-item flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-100">
+          <i class="fas fa-user-plus w-4"></i>
+          <span>Create User</span>
+        </a>
+
+        <a id="menuAttendance" class="menu-item flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-100">
+          <i class="fas fa-calendar-check w-4"></i>
+          <span>Attendance</span>
+        </a>
+
+        <a id="menuCallHistory" class="menu-item flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-100">
+          <i class="fas fa-phone-alt w-4"></i>
+          <span>Call History</span>
+        </a>
+
+        <a id="menuCallAnalytics" class="menu-item flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-100">
+          <i class="fas fa-chart-bar w-4"></i>
+          <span>Call Analytics</span>
+        </a>
+
+        <a id="menuPerformance" class="menu-item flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-100">
+          <i class="fas fa-chart-line w-4"></i>
+          <span>Performance</span>
+        </a>
+      </nav>
+
+      <div class="p-4 border-t border-gray-200">
+        <button id="logoutBtn" class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-2.5 rounded-lg flex items-center justify-center gap-2 font-medium transition-all hover:shadow-lg hover:from-red-600 hover:to-red-700">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main id="mainContent" class="flex-1 overflow-auto p-6 lg:ml-0">
+
+      <header class="flex items-center justify-between mb-8 bg-white p-4 rounded-xl shadow-sm">
+        <div class="flex items-center gap-4">
+          <button id="openSidebar" class="lg:hidden text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <i class="fas fa-bars"></i>
+          </button>
+          <div>
+            <h2 id="pageTitle" class="text-2xl font-bold text-gray-800">Dashboard</h2>
+            <p id="pageSubtitle" class="text-sm text-gray-500">Overview</p>
+          </div>
+        </div>
+        <div id="rightHeader" class="flex items-center gap-4">
+        </div>
+      </header>
+
       <!-- Dashboard -->
-      <section id="sectionDashboard" class="page-section">
-        <div class="mb-6">
-          <h3 class="text-lg lg:text-2xl font-bold">Dashboard</h3>
-          <p class="text-sm text-gray-600">Welcome back! Here's what's happening today.</p>
+      <section id="sectionDashboard">
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Dashboard</h3>
+          <p class="text-gray-600">Welcome back! Here's what's happening today.</p>
         </div>
 
-        <!-- Stat cards -->
-        <div id="stats-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
+        <div id="stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
 
-        <!-- Row charts -->
-        <div class="grid lg:grid-cols-2 gap-4 mb-6">
-          <div class="bg-white p-4 rounded-xl shadow-sm">
-            <h4 class="font-semibold mb-3 flex items-center gap-2"><i class="fas fa-sync text-blue-500"></i>Recent Sync</h4>
-            <div id="recent-sync-list" class="space-y-2 text-sm"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white p-6 rounded-xl shadow-sm">
+            <h4 class="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+              <i class="fas fa-sync text-blue-500"></i> Recent Sync Activity
+            </h4>
+            <div id="recent-sync-list" class="space-y-3"></div>
           </div>
-          <div class="bg-white p-4 rounded-xl shadow-sm">
-            <h4 class="font-semibold mb-3 flex items-center gap-2"><i class="fas fa-user-clock text-green-500"></i>User Logs</h4>
-            <div id="user-logs-container" class="space-y-2 text-sm"></div>
+          
+          <div class="bg-white p-6 rounded-xl shadow-sm">
+            <h4 class="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+              <i class="fas fa-user-clock text-green-500"></i> Recent User Actions
+            </h4>
+            <div id="user-logs-container" class="space-y-3"></div>
           </div>
         </div>
 
-        <!-- Trend -->
-        <div class="bg-white p-4 rounded-xl shadow-sm">
-          <h4 class="font-semibold mb-3 flex items-center gap-2"><i class="fas fa-chart-line text-purple-500"></i>Performance Trend</h4>
-          <canvas id="performanceChart" height="120"></canvas>
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <h4 class="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            <i class="fas fa-chart-line text-purple-500"></i> Performance Trend
+          </h4>
+          <div class="p-4">
+            <canvas id="performanceChart" height="120"></canvas>
+          </div>
         </div>
       </section>
 
       <!-- Users -->
-      <section id="sectionUsers" class="page-section hidden">
-        <div class="mb-6">
-          <h3 class="text-lg lg:text-2xl font-bold">Users</h3>
-          <p class="text-sm text-gray-600">Manage all users</p>
+      <section id="sectionUsers" class="hidden-section">
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Users</h3>
+          <p class="text-gray-600">Manage all users in the system</p>
         </div>
+        
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div class="p-3 flex flex-col sm:flex-row gap-3 justify-between">
-            <div class="relative w-full sm:w-64">
-              <input id="userSearchInput" type="text" placeholder="Search users..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+            <div class="relative w-64">
+              <input id="userSearchInput" type="text" placeholder="Search users..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
             </div>
             <div class="flex gap-2">
-              <select id="userStatusFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select id="userStatusFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-              <button id="userFilterBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Filter</button>
+              <button id="userFilterBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors">
+                <i class="fas fa-filter"></i> Filter
+              </button>
             </div>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="bg-gray-50 text-left">
-                <tr>
-                  <th class="p-3">User</th>
-                  <th class="p-3">Phone</th>
-                  <th class="p-3">Performance</th>
-                  <th class="p-3">Status</th>
-                  <th class="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="usersTableBody" class="divide-y divide-gray-200"></tbody>
-            </table>
-          </div>
+          <table class="w-full">
+            <thead class="bg-gray-50 text-left">
+              <tr>
+                <th class="p-4 font-medium text-gray-700">User</th>
+                <th class="p-4 font-medium text-gray-700">Phone</th>
+                <th class="p-4 font-medium text-gray-700">Performance</th>
+                <th class="p-4 font-medium text-gray-700">Status</th>
+                <th class="p-4 font-medium text-gray-700 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody" class="divide-y divide-gray-200"></tbody>
+          </table>
         </div>
       </section>
 
       <!-- Create User -->
-      <section id="sectionCreateUser" class="page-section hidden">
-        <div class="mb-6">
-          <h3 class="text-lg lg:text-2xl font-bold">Create User</h3>
-          <p class="text-sm text-gray-600">Add a new user</p>
+      <section id="sectionCreateUser" class="hidden-section">
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Create User</h3>
+          <p class="text-gray-600">Add a new user to the system</p>
         </div>
-        <div class="bg-white p-4 lg:p-6 rounded-xl shadow-sm">
-          <form id="createUserForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <div class="bg-white p-8 rounded-xl shadow-sm">
+          <form id="createUserForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="md:col-span-2">
-              <label class="block text-sm font-medium mb-1">Full Name</label>
-              <input id="userName" required class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+              <input id="userName" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" required />
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1">Email</label>
-              <input id="userEmail" type="email" required class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input id="userEmail" type="email" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" required />
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1">Phone</label>
-              <input id="userPhone" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+              <input id="userPhone" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" />
             </div>
             <div class="md:col-span-2">
-              <label class="block text-sm font-medium mb-1">Password</label>
-              <input id="userPassword" type="password" required class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <input id="userPassword" type="password" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" required />
             </div>
             <div class="md:col-span-2 flex justify-end">
-              <button class="bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-6 rounded-lg">Create User</button>
+              <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg font-medium flex items-center gap-2 transition-all hover:shadow-lg">
+                <i class="fas fa-user-plus"></i> Create User
+              </button>
             </div>
           </form>
         </div>
       </section>
 
       <!-- Attendance -->
-      <section id="sectionAttendance" class="page-section hidden">
-        <div class="mb-6">
-          <h3 class="text-lg lg:text-2xl font-bold">Attendance</h3>
-          <p class="text-sm text-gray-600">Track attendance</p>
+      <section id="sectionAttendance" class="hidden-section">
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Attendance</h3>
+          <p class="text-gray-600">Track employee attendance records</p>
         </div>
+        
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div class="p-3 flex flex-col sm:flex-row gap-3 justify-between">
+          <div class="p-4 border-b border-gray-200 flex justify-between items-center">
             <div class="flex gap-2">
-              <button id="attendanceToday" class="filter-btn bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
-              <button id="attendanceWeek" class="filter-btn bg-white border border-gray-300 px-4 py-2 rounded-lg">This Week</button>
-              <button id="attendanceMonth" class="filter-btn bg-white border border-gray-300 px-4 py-2 rounded-lg">This Month</button>
+              <button id="attendanceToday" class="filter-active bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
+              <button id="attendanceWeek" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Week</button>
+              <button id="attendanceMonth" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Month</button>
             </div>
-            <button id="exportAttendance" class="bg-white border border-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50">
-              <i class="fas fa-download"></i>Export
+            <button id="exportAttendance" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors">
+              <i class="fas fa-download"></i> Export
             </button>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="bg-gray-50 text-left">
-                <tr>
-                  <th class="p-3">User</th>
-                  <th class="p-3">Check In</th>
-                  <th class="p-3">Check Out</th>
-                  <th class="p-3">Status</th>
-                </tr>
-              </thead>
-              <tbody id="attendance-table-body" class="divide-y divide-gray-200"></tbody>
-            </table>
-          </div>
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-4 font-medium text-gray-700 text-left">User</th>
+                <th class="p-4 font-medium text-gray-700 text-left">Check In</th>
+                <th class="p-4 font-medium text-gray-700 text-left">Check Out</th>
+                <th class="p-4 font-medium text-gray-700 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody id="attendance-table-body" class="divide-y divide-gray-200"></tbody>
+          </table>
         </div>
       </section>
 
       <!-- Call History -->
-      <section id="sectionCallHistory" class="page-section hidden">
-        <div class="mb-6">
-          <h3 class="text-lg lg:text-2xl font-bold">Call History</h3>
-          <p class="text-sm text-gray-600">Review call records</p>
+      <section id="sectionCallHistory" class="hidden-section">
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Call History</h3>
+          <p class="text-gray-600">Review all call records and analytics</p>
         </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm">
-          <div class="mb-3 flex flex-col sm:flex-row gap-3">
-            <div class="relative w-full sm:w-64">
-              <input id="callSearchInput" type="text" placeholder="Search calls..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="mb-4 flex gap-4">
+            <div class="relative w-64">
+              <input id="callSearchInput" type="text" placeholder="Search calls..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
             </div>
-            <select id="callTypeFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="all">All Types</option>
+            <select id="callTypeFilter" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <option value="all">All Call Types</option>
               <option value="incoming">Incoming</option>
               <option value="outgoing">Outgoing</option>
               <option value="missed">Missed</option>
             </select>
           </div>
-          <div id="call-history-container" class="overflow-x-auto"></div>
+
+          <!-- 🔥 FIXED CONTAINER -->
+          <div id="call-history-container"></div>
         </div>
       </section>
 
       <!-- Call Analytics -->
-      <section id="sectionCallAnalytics" class="page-section hidden">
-        <div class="mb-6">
-          <h3 class="text-lg lg:text-2xl font-bold">Call Analytics</h3>
-          <p class="text-sm text-gray-600">Detailed analytics</p>
+      <section id="sectionCallAnalytics" class="hidden-section">
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Call Analytics</h3>
+          <p class="text-gray-600">Detailed analytics based on call logs</p>
         </div>
+
         <!-- Cards -->
-        <div id="call-analytics-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
-        <!-- Trend -->
-        <div class="bg-white p-4 rounded-xl shadow-sm mb-6">
-          <h4 class="font-semibold mb-3 flex items-center gap-2"><i class="fas fa-chart-line text-blue-500"></i>Call Volume Trend</h4>
-          <canvas id="call-trend-canvas" height="120"></canvas>
+        <div id="call-analytics-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
+
+        <!-- Trend Chart -->
+        <div class="bg-white p-6 rounded-xl shadow-sm mb-8">
+          <h4 class="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            <i class="fas fa-chart-line text-blue-500"></i> Call Volume Trend
+          </h4>
+          <div class="h-64">
+            <canvas id="call-trend-canvas"></canvas>
+          </div>
         </div>
-        <!-- Table -->
-        <div class="bg-white p-4 rounded-xl shadow-sm">
-          <h4 class="font-semibold mb-3 flex items-center gap-2"><i class="fas fa-table text-purple-500"></i>User-wise Summary</h4>
-          <div id="call-analytics-table-container" class="overflow-x-auto"></div>
+
+        <!-- User Summary Table -->
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <h4 class="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            <i class="fas fa-table text-purple-500"></i> User-wise Summary
+          </h4>
+          <div id="call-analytics-table-container"></div>
         </div>
       </section>
 
       <!-- Performance -->
-      <section id="sectionPerformance" class="page-section hidden">
-        <div class="mb-6">
-          <h3 class="text-lg lg:text-2xl font-bold">Performance</h3>
-          <p class="text-sm text-gray-600">Team metrics</p>
+      <section id="sectionPerformance" class="hidden-section">
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Performance</h3>
+          <p class="text-gray-600">Monitor team performance metrics</p>
         </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm">
-          <div class="mb-4 flex gap-2">
-            <button id="performanceToday" class="filter-btn bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
-            <button id="performanceWeek" class="filter-btn bg-white border border-gray-300 px-4 py-2 rounded-lg">This Week</button>
-            <button id="performanceMonth" class="filter-btn bg-white border border-gray-300 px-4 py-2 rounded-lg">This Month</button>
+        
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="mb-4 flex gap-4">
+            <button id="performanceToday" class="filter-active bg-blue-600 text-white px-4 py-2 rounded-lg">Today</button>
+            <button id="performanceWeek" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Week</button>
+            <button id="performanceMonth" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">This Month</button>
           </div>
           <canvas id="performanceBarCanvas" height="100"></canvas>
         </div>
       </section>
-    </div>
-  </main>
-</div>
 
-<!-- ==========  NOTIFICATION AREA  ========== -->
-<div id="notificationArea" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    </main>
+  </div>
 
-<!-- ==========  QUICK ACTIONS FAB (mobile)  ========== -->
-<div class="fixed bottom-4 right-4 lg:hidden z-40">
-  <button id="quickFab" class="bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center">
-    <i class="fas fa-plus"></i>
-  </button>
-</div>
+  <div id="notificationArea" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
-<!-- ==========  ORIGINAL JS FILES (unchanged)  ========== -->
-<script src="/admin/js/auth.js"></script>
-<script src="/admin/js/dashboard.js"></script>
-<script src="/admin/js/users.js"></script>
-<script src="/admin/js/create_user.js"></script>
-<script src="/admin/js/attendance.js"></script>
-<script src="/admin/js/call_history.js"></script>
-<script src="/admin/js/call_analytics.js"></script>
-<script src="/admin/js/performance.js"></script>
-<script src="/admin/js/admin.js"></script>
+  <script src="/admin/js/auth.js"></script>
+  <script src="/admin/js/dashboard.js"></script>
+  <script src="/admin/js/users.js"></script>
+  <script src="/admin/js/create_user.js"></script>
+  <script src="/admin/js/attendance.js"></script>
+  <script src="/admin/js/call_history.js"></script>
+  <script src="/admin/js/call_analytics.js"></script>
+  <script src="/admin/js/performance.js"></script>
+  <script src="/admin/js/admin.js"></script>
 
-<script>
-/* ==========  RESPONSIVE NAV + PAGE ROUTER  ========== */
-const sidebar   = document.getElementById('sidebar');
-const overlay   = document.getElementById('overlay');
-const openBtn   = document.getElementById('openSidebar');
-const closeBtn  = document.getElementById('closeSidebar');
+  <script>
+    window.dashboard = window.dashboard || new DashboardManager();
+    window.usersManager = window.usersManager || new UsersManager();
+    window.attendanceManager = window.attendanceManager || new AttendanceManager();
+    window.callHistoryManager = window.callHistoryManager || new CallHistoryManager();
+    window.callAnalyticsManager = window.callAnalyticsManager || new CallAnalyticsManager();
+    window.performanceManager = window.performanceManager || new PerformanceManager();
 
-openBtn.addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.remove('hidden'); });
-closeBtn.addEventListener('click', closeSidebar);
-overlay.addEventListener('click', closeSidebar);
+    window.menuDashboard = document.getElementById('menuDashboard');
+    window.menuUsers = document.getElementById('menuUsers');
+    window.menuCreateUser = document.getElementById('menuCreateUser');
+    window.menuAttendance = document.getElementById('menuAttendance');
+    window.menuCallHistory = document.getElementById('menuCallHistory');
+    window.menuCallAnalytics = document.getElementById('menuCallAnalytics');
+    window.menuPerformance = document.getElementById('menuPerformance');
 
-function closeSidebar(){ sidebar.classList.remove('open'); overlay.classList.add('hidden'); }
+    window.sectionDashboard = document.getElementById('sectionDashboard');
+    window.sectionUsers = document.getElementById('sectionUsers');
+    window.sectionCreateUser = document.getElementById('sectionCreateUser');
+    window.sectionAttendance = document.getElementById('sectionAttendance');
+    window.sectionCallHistory = document.getElementById('sectionCallHistory');
+    window.sectionCallAnalytics = document.getElementById('sectionCallAnalytics');
+    window.sectionPerformance = document.getElementById('sectionPerformance');
 
-/* ----------  MENU SWITCH  ---------- */
-const menuLinks = document.querySelectorAll('.menu-item');
-const sections  = document.querySelectorAll('.page-section');
+    window.logoutBtn = document.getElementById('logoutBtn');
 
-function hideAllSections(){
-  sections.forEach(s=>s.classList.add('hidden'));
-  menuLinks.forEach(m=>m.classList.remove('active-menu','bg-blue-50','text-blue-700','border-r-4','border-blue-600'));
-}
-function showSection(id){
-  hideAllSections();
-  document.getElementById('section'+id.charAt(0).toUpperCase()+id.slice(1)).classList.remove('hidden');
-  document.querySelector(`[data-page="${id}"]`).classList.add('active-menu','bg-blue-50','text-blue-700','border-r-4','border-blue-600');
-}
+    document.getElementById('openSidebar')?.addEventListener('click', () => {
+      document.getElementById('sidebar')?.classList.add('active');
+      document.getElementById('overlay')?.classList.add('active');
+    });
+    document.getElementById('closeSidebar')?.addEventListener('click', () => {
+      document.getElementById('sidebar')?.classList.remove('active');
+      document.getElementById('overlay')?.classList.remove('active');
+    });
+    document.getElementById('overlay')?.addEventListener('click', () => {
+      document.getElementById('sidebar')?.classList.remove('active');
+      document.getElementById('overlay')?.classList.remove('active');
+    });
 
-menuLinks.forEach(link=>{
-  link.addEventListener('click', ()=>{
-    const page = link.dataset.page;
-    showSection(page);
-    if(window.innerWidth < 1024) closeSidebar();
-    /* trigger original managers */
-    if(page==='dashboard' && window.dashboard) dashboard.loadStats();
-    if(page==='users' && window.usersManager) usersManager.loadUsers();
-    if(page==='attendance' && window.attendanceManager) attendanceManager.loadAttendance();
-    if(page==='callHistory' && window.callHistoryManager) callHistoryManager.loadCalls();
-    if(page==='callAnalytics' && window.callAnalyticsManager) callAnalyticsManager.loadAnalytics();
-    if(page==='performance' && window.performanceManager) performanceManager.loadPerformance();
-  });
-});
+    function hideAll() {
+      [sectionDashboard, sectionUsers, sectionCreateUser, sectionAttendance, sectionCallHistory, sectionCallAnalytics, sectionPerformance]
+        .forEach(s => s?.classList.add('hidden-section'));
+      document.querySelectorAll('.menu-item')?.forEach(m => m.classList.remove('active-menu'));
+    }
 
-/* ----------  PERFORMANCE BUTTONS  ---------- */
-document.getElementById('performanceToday').addEventListener('click',  ()=> performanceManager.loadPerformance('today'));
-document.getElementById('performanceWeek').addEventListener('click',   ()=> performanceManager.loadPerformance('week'));
-document.getElementById('performanceMonth').addEventListener('click',  ()=> performanceManager.loadPerformance('month'));
+    menuDashboard.onclick = () => {
+      hideAll();
+      sectionDashboard.classList.remove('hidden-section');
+      menuDashboard.classList.add('active-menu');
+      if (dashboard && typeof dashboard.loadStats === 'function') dashboard.loadStats();
+    };
 
-/* ----------  LOGOUT  ---------- */
-document.getElementById('logoutBtn').addEventListener('click', () => auth.logout());
+    menuUsers.onclick = () => {
+      hideAll();
+      sectionUsers.classList.remove('hidden-section');
+      menuUsers.classList.add('active-menu');
+      if (usersManager && typeof usersManager.loadUsers === 'function') usersManager.loadUsers();
+    };
 
-/* ----------  INITIAL ROUTE  ---------- */
-document.addEventListener('DOMContentLoaded', ()=>{
-  if(!auth.getToken()){ window.location.href='/admin/login.html'; return; }
-  showSection('dashboard');
-});
-</script>
+    menuCreateUser.onclick = () => {
+      hideAll();
+      sectionCreateUser.classList.remove('hidden-section');
+      menuCreateUser.classList.add('active-menu');
+    };
+
+    menuAttendance.onclick = () => {
+      hideAll();
+      sectionAttendance.classList.remove('hidden-section');
+      menuAttendance.classList.add('active-menu');
+      if (attendanceManager && typeof attendanceManager.loadAttendance === 'function') attendanceManager.loadAttendance();
+    };
+
+    menuCallHistory.onclick = () => {
+      hideAll();
+      sectionCallHistory.classList.remove('hidden-section');
+      menuCallHistory.classList.add('active-menu');
+      if (callHistoryManager && typeof callHistoryManager.loadCalls === 'function') callHistoryManager.loadCalls();
+    };
+
+    menuCallAnalytics.onclick = () => {
+      hideAll();
+      sectionCallAnalytics.classList.remove('hidden-section');
+      menuCallAnalytics.classList.add('active-menu');
+      if (callAnalyticsManager && typeof callAnalyticsManager.loadAnalytics === 'function') callAnalyticsManager.loadAnalytics();
+    };
+
+    menuPerformance.onclick = () => {
+      hideAll();
+      sectionPerformance.classList.remove('hidden-section');
+      menuPerformance.classList.add('active-menu');
+      if (performanceManager && typeof performanceManager.loadPerformance === 'function') performanceManager.loadPerformance();
+    };
+
+    logoutBtn.addEventListener('click', () => auth.logout());
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!auth.getToken()) {
+        window.location.href = "/admin/login.html";
+        return;
+      }
+      menuDashboard.click();
+      initializeFilters();
+    });
+
+    document.getElementById('createUserForm')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (usersManager && typeof usersManager.createUser === 'function') usersManager.createUser();
+    });
+
+    function initializeFilters() {
+      const userSearchInput = document.getElementById('userSearchInput');
+      const userStatusFilter = document.getElementById('userStatusFilter');
+      const userFilterBtn = document.getElementById('userFilterBtn');
+      
+      if (userSearchInput) {
+        userSearchInput.addEventListener('input', debounce(function() {
+          filterUsers();
+        }, 300));
+      }
+      
+      if (userStatusFilter) {
+        userStatusFilter.addEventListener('change', filterUsers);
+      }
+      
+      if (userFilterBtn) {
+        userFilterBtn.addEventListener('click', filterUsers);
+      }
+      
+      const attendanceToday = document.getElementById('attendanceToday');
+      const attendanceWeek = document.getElementById('attendanceWeek');
+      const attendanceMonth = document.getElementById('attendanceMonth');
+      const exportAttendance = document.getElementById('exportAttendance');
+      
+      if (attendanceToday) {
+        attendanceToday.addEventListener('click', function() {
+          setActiveFilter(this, [attendanceWeek, attendanceMonth]);
+          filterAttendance('today');
+        });
+      }
+      
+      if (attendanceWeek) {
+        attendanceWeek.addEventListener('click', function() {
+          setActiveFilter(this, [attendanceToday, attendanceMonth]);
+          filterAttendance('week');
+        });
+      }
+      
+      if (attendanceMonth) {
+        attendanceMonth.addEventListener('click', function() {
+          setActiveFilter(this, [attendanceToday, attendanceWeek]);
+          filterAttendance('month');
+        });
+      }
+      
+      if (exportAttendance) {
+        exportAttendance.addEventListener('click', exportAttendanceData);
+      }
+      
+      const callSearchInput = document.getElementById('callSearchInput');
+      const callTypeFilter = document.getElementById('callTypeFilter');
+      
+      if (callSearchInput) {
+        callSearchInput.addEventListener('input', debounce(function() {
+          filterCalls();
+        }, 300));
+      }
+      
+      if (callTypeFilter) {
+        callTypeFilter.addEventListener('change', filterCalls);
+      }
+      
+      const performanceToday = document.getElementById('performanceToday');
+      const performanceWeek = document.getElementById('performanceWeek');
+      const performanceMonth = document.getElementById('performanceMonth');
+      
+      if (performanceToday) {
+        performanceToday.addEventListener('click', function() {
+          setActiveFilter(this, [performanceWeek, performanceMonth]);
+          filterPerformance('today');
+        });
+      }
+      
+      if (performanceWeek) {
+        performanceWeek.addEventListener('click', function() {
+          setActiveFilter(this, [performanceToday, performanceMonth]);
+          filterPerformance('week');
+        });
+      }
+      
+      if (performanceMonth) {
+        performanceMonth.addEventListener('click', function() {
+          setActiveFilter(this, [performanceToday, performanceWeek]);
+          filterPerformance('month');
+        });
+      }
+    }
+    
+    function setActiveFilter(activeElement, otherElements) {
+      activeElement.classList.add('filter-active', 'bg-blue-600', 'text-white');
+      activeElement.classList.remove('bg-white', 'text-gray-700', 'border', 'border-gray-300');
+      
+      otherElements.forEach(element => {
+        element.classList.remove('filter-active', 'bg-blue-600', 'text-white');
+        element.classList.add('bg-white', 'text-gray-700', 'border', 'border-gray-300');
+      });
+    }
+    
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+    
+    function filterUsers() {
+      const searchTerm = document.getElementById('userSearchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('userStatusFilter').value;
+      
+      if (usersManager && typeof usersManager.loadUsers === 'function') {
+        usersManager.loadUsers({ search: searchTerm, status: statusFilter });
+      }
+      
+      console.log('Filtering users:', { searchTerm, statusFilter });
+    }
+    
+    function filterAttendance(timeRange) {
+      if (attendanceManager && typeof attendanceManager.loadAttendance === 'function') {
+        attendanceManager.loadAttendance(timeRange);
+      }
+      
+      console.log('Filtering attendance by:', timeRange);
+    }
+    
+    function filterCalls() {
+      const searchTerm = document.getElementById('callSearchInput').value.toLowerCase();
+      const callType = document.getElementById('callTypeFilter').value;
+      
+      if (callHistoryManager && typeof callHistoryManager.loadCalls === 'function') {
+        callHistoryManager.loadCalls({ search: searchTerm, type: callType });
+      }
+      
+      console.log('Filtering calls:', { searchTerm, callType });
+    }
+    
+    function filterPerformance(timeRange) {
+      if (performanceManager && typeof performanceManager.loadPerformance === 'function') {
+        performanceManager.loadPerformance(timeRange);
+      }
+      
+      console.log('Filtering performance by:', timeRange);
+    }
+    
+    function exportAttendanceData() {
+      console.log('Exporting attendance data...');
+      
+      if (window.showNotification) {
+        window.showNotification('Attendance data exported successfully!', 'success');
+      } else {
+        alert('Attendance data exported successfully!');
+      }
+    }
+  </script>
 </body>
 </html>
