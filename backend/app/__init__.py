@@ -72,6 +72,8 @@ def create_app(config_class=Config):
     from app.routes.call_history import bp as call_history_bp
     from app.routes.admin_call_history import bp as admin_call_history_bp
     from app.routes.admin_attendance import bp as admin_attendance_bp
+    from app.routes.db_repair import bp as db_repair_bp
+
 
     app.register_blueprint(super_admin_bp)
     app.register_blueprint(admin_bp)
@@ -81,6 +83,8 @@ def create_app(config_class=Config):
     app.register_blueprint(call_history_bp)
     app.register_blueprint(admin_call_history_bp)
     app.register_blueprint(admin_attendance_bp)
+    app.register_blueprint(db_repair_bp)
+
 
     # ------------------------------------------
     # DATABASE INITIALIZATION
