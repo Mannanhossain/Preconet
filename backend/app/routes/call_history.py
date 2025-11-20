@@ -105,45 +105,51 @@ def sync_call_history():
         errors = []
 
         for entry in call_list:
-            raw_ts = entry.get("timestamp")
-            phone_number = entry.get("number")
+            # -------------------------
+            # Extract correct fields
+            # -------------------------
+            ts_str = entry.get("timestamp")
+            phone_number = entry.get("phone_number")
 
-            if not raw_ts or not phone_number:
+            if not ts_str or not phone_number:
                 errors.append({"entry": entry, "error": "Missing timestamp or phone_number"})
                 continue
 
-            ts = parse_datetime(raw_ts)
+            # parse datetime
+            ts = parse_datetime(ts_str)
             if not ts:
-                errors.append({"entry": entry, "error": "Invalid timestamp format"})
+                errors.append({"entry": entry, "error": "Invalid timestamp"})
                 continue
 
             ts_norm = ts.replace(microsecond=0)
 
-            formatted = entry.get("formatted_number") or ""
-            call_type = entry.get("call_type") or "unknown"
-            contact_name = entry.get("name") or ""
+            formatted = entry.get("formatted_number")
+            call_type = entry.get("call_type")
+            duration = entry.get("duration", 0)
+            contact_name = entry.get("contact_name")
 
-            # Duration must be integer
             try:
-                duration = int(entry.get("duration", 0))
+                duration = int(duration)
             except:
                 duration = 0
 
-            # -------------------------------------------------
-            # 🔥 FIXED DUPLICATE DETECTION (NO DB TYPE ERRORS)
-            # Uses DATE(timestamp) instead of full comparison
-            # -------------------------------------------------
-            exists = CallHistory.query.filter(
-                CallHistory.user_id == user_id,
-                CallHistory.phone_number == phone_number,
-                CallHistory.call_type == call_type,
-                CallHistory.duration == duration,
-                func.date(CallHistory.timestamp) == ts_norm.date()
+            # -------------------------
+            # Duplicate check
+            # -------------------------
+            exists = CallHistory.query.filter_by(
+                user_id=user_id,
+                phone_number=phone_number,
+                call_type=call_type,
+                duration=duration,
+                timestamp=ts_norm
             ).first()
 
             if exists:
                 continue
 
+            # -------------------------
+            # Save record
+            # -------------------------
             rec = CallHistory(
                 user_id=user_id,
                 phone_number=phone_number,
@@ -151,7 +157,7 @@ def sync_call_history():
                 call_type=call_type,
                 timestamp=ts_norm,
                 duration=duration,
-                contact_name=contact_name
+                contact_name=contact_name,
             )
 
             db.session.add(rec)
@@ -159,7 +165,7 @@ def sync_call_history():
 
         db.session.commit()
 
-        # Update user's last sync time
+        # Update user sync time
         user.last_sync = datetime.utcnow()
         db.session.add(user)
         db.session.commit()
@@ -172,44 +178,9 @@ def sync_call_history():
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.exception("Error in call history sync")
+        current_app.logger.exception("Call history sync failed")
         return jsonify({"error": "Internal server error", "detail": str(e)}), 500
 
-
-# -------------------------------------------------
-# 2) USER — MY CALL HISTORY
-# -------------------------------------------------
-@bp.route("/my", methods=["GET"])
-@jwt_required()
-def my_call_history():
-    try:
-        user_id = int(get_jwt_identity())
-
-        days = request.args.get("days", 30, type=int)
-        call_type = request.args.get("call_type", "all")
-
-        from_date = datetime.utcnow() - timedelta(days=max(days, 0))
-
-        q = CallHistory.query.filter(CallHistory.user_id == user_id)
-        q = q.filter(CallHistory.created_at >= from_date)
-
-        if call_type != "all":
-            q = q.filter(CallHistory.call_type == call_type)
-
-        q = q.order_by(CallHistory.timestamp.desc())
-
-        items, meta = paginate(q)
-
-        return jsonify({
-            "user_id": user_id,
-            "total": meta["total"],
-            "call_history": [r.to_dict() for r in items],
-            "meta": meta
-        }), 200
-
-    except Exception as e:
-        current_app.logger.exception("Failed my_call_history")
-        return jsonify({"error": str(e)}), 500
 
 
 # -------------------------------------------------
@@ -261,3 +232,4 @@ def admin_user_call_history(user_id):
     except Exception as e:
         current_app.logger.exception("Failed admin_user_call_history")
         return jsonify({"error": str(e)}), 500
+
