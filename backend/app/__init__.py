@@ -65,13 +65,13 @@ def create_app(config_class=Config):
             # db.create_all()
             print("✅ DB created")
 
-        if not SuperAdmin.query.first():
-            print("⚙ Creating default Super Admin")
-            sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
-            sa.set_password("admin123")
-            db.session.add(sa)
-            db.session.commit()
-            print("✅ SuperAdmin created")
+        # if not SuperAdmin.query.first():
+        #     print("⚙ Creating default Super Admin")
+        #     sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
+        #     sa.set_password("admin123")
+        #     db.session.add(sa)
+        #     db.session.commit()
+        #     print("✅ SuperAdmin created")
 
     # ---------------------------
     # FRONTEND ROUTING
