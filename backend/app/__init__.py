@@ -62,7 +62,7 @@ def create_app(config_class=Config):
 
         if not tables:
             print("⚙ Creating DB tables...")
-            db.create_all()
+            # db.create_all()
             print("✅ DB created")
 
         if not SuperAdmin.query.first():
