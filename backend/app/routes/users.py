@@ -173,6 +173,8 @@ def login():
                 "role": "user",
                 "performance_score": user.performance_score,
                 "last_sync": iso(user.last_sync)
+                "expiry_date": str(user.expiry_date) if user.expiry_date else None
+
             }
         }), 200
 
@@ -334,3 +336,4 @@ def sync_status():
 
     except Exception as e:
         return jsonify({"error": "Internal server error", "detail": str(e)}), 500
+
