@@ -1,16 +1,17 @@
-# app/routes/admin_call_analytics_sync.py
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
 from app.models import db, CallHistory, User, Admin
 
-bp = Blueprint("admin_call_analytics_sync", __name__, url_prefix="/api/admin")
+bp = Blueprint("admin_call_analytics", __name__, url_prefix="/api/admin")
 
 
-@bp.route("/call-analytics/sync", methods=["POST"])
+# ==============================
+# GET /api/admin/call-analytics   <-- FRONTEND EXPECTS THIS
+# ==============================
+@bp.route("/call-analytics", methods=["GET"])
 @jwt_required()
-def admin_call_analytics_sync():
+def get_call_analytics():
     try:
         admin_id = int(get_jwt_identity())
         admin = Admin.query.get(admin_id)
@@ -18,11 +19,6 @@ def admin_call_analytics_sync():
         if not admin:
             return jsonify({"error": "Unauthorized"}), 401
 
-        # You don't need request body — analytics are auto-generated
-        # But we accept body for future flexibility
-        req_data = request.get_json() or {}
-
-        # Total call statistics
         total_incoming = db.session.query(func.count()).filter(
             CallHistory.call_type == "incoming"
         ).scalar() or 0
@@ -41,7 +37,6 @@ def admin_call_analytics_sync():
             func.coalesce(func.sum(CallHistory.duration), 0)
         ).scalar() or 0
 
-        # User-wise summary
         users = (
             db.session.query(
                 User.id,
@@ -66,16 +61,12 @@ def admin_call_analytics_sync():
         ]
 
         return jsonify({
-            "message": "Analytics generated successfully",
-            "request_received": req_data,   # for debugging only
-            "analytics": {
-                "total_calls": total_calls,
-                "incoming": total_incoming,
-                "outgoing": total_outgoing,
-                "missed": total_missed,
-                "total_duration": total_duration,
-                "user_summary": user_summary
-            }
+            "total_calls": total_calls,
+            "incoming": total_incoming,
+            "outgoing": total_outgoing,
+            "missed": total_missed,
+            "total_duration": total_duration,
+            "user_summary": user_summary
         }), 200
 
     except Exception as e:
