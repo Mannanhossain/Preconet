@@ -56,8 +56,7 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_performance_bp)
     app.register_blueprint(analytics_bp)    # ✅ ADD THIS
 
-    
-    app.register_blueprint(call_analytics_bp)
+
     app.register_blueprint(admin_performance_bp)
 
     # ---------------------------
