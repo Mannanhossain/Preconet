@@ -78,7 +78,6 @@ def performance():
         user_data = (
             db.session.query(
                 User.id,
-                User.name,
                 func.count(CallHistory.id).label("total_calls"),
                 func.sum(CallHistory.duration).label("total_duration"),
                 func.sum(incoming_case).label("incoming"),
