@@ -73,6 +73,7 @@ class SuperAdmin(db.Model):
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=now)
+    
 
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
@@ -140,6 +141,8 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=now)
     last_login = db.Column(db.DateTime)
     last_sync = db.Column(db.DateTime)
+    expiry_date = db.Column(db.Date, nullable=True)
+
 
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
@@ -292,3 +295,4 @@ class ActivityLog(db.Model):
             "extra_data": self.extra_data,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None
         }
+
