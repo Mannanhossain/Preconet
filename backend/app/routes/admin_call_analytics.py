@@ -4,6 +4,27 @@ from sqlalchemy import func, cast, Date
 from app.models import db, CallHistory, User, Admin
 
 bp = Blueprint("admin_call_analytics", __name__, url_prefix="/api/admin")
+# ==============================
+# POST /api/admin/call-analytics/sync
+# ==============================
+@bp.route("/call-analytics/sync", methods=["POST"])
+@jwt_required()
+def sync_call_analytics():
+    admin_id = get_jwt_identity()
+
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "Empty payload"}), 400
+
+        print("📥 Received analytics sync:", data)
+
+        return jsonify({"message": "Analytics synced successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @bp.route("/call-analytics", methods=["GET"])
 @jwt_required()
