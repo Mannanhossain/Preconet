@@ -2,7 +2,7 @@
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import func, and_, case
+from sqlalchemy import func, and_, or_, case
 from datetime import datetime, timedelta
 
 from app.models import db, CallHistory, User, Admin
@@ -29,11 +29,14 @@ def get_date_range(filter_type):
         end = today + timedelta(days=1)
 
     else:
-        # Default: All time
         start = datetime(2000, 1, 1).date()
         end = today + timedelta(days=1)
 
-    return start, end
+    # Convert to timestamp
+    start_ts = int(datetime.combine(start, datetime.min.time()).timestamp())
+    end_ts = int(datetime.combine(end, datetime.min.time()).timestamp())
+
+    return start_ts, end_ts
 
 
 # ---------------------------
@@ -51,33 +54,19 @@ def performance():
 
         # Load filter
         filter_type = request.args.get("filter", "today")
+        start_ts, end_ts = get_date_range(filter_type)
 
-        start, end = get_date_range(filter_type)
+        # CASE expressions
+        incoming_case = case((CallHistory.call_type == "incoming", 1), else_=0)
+        outgoing_case = case((CallHistory.call_type == "outgoing", 1), else_=0)
+        missed_case = case((CallHistory.call_type == "missed", 1), else_=0)
+        rejected_case = case((CallHistory.call_type == "rejected", 1), else_=0)
 
-        # CASE expressions for call types
-        incoming_case = case(
-            (CallHistory.call_type == "incoming", 1),
-            else_=0
-        )
-        outgoing_case = case(
-            (CallHistory.call_type == "outgoing", 1),
-            else_=0
-        )
-        missed_case = case(
-            (CallHistory.call_type == "missed", 1),
-            else_=0
-        )
-        rejected_case = case(
-            (CallHistory.call_type == "rejected", 1),
-            else_=0
-        )
-
-        # ----------------------------
-        # USER PERFORMANCE (Grouped)
-        # ----------------------------
+        # USER PERFORMANCE
         user_data = (
             db.session.query(
                 User.id,
+                User.name,
                 func.count(CallHistory.id).label("total_calls"),
                 func.sum(CallHistory.duration).label("total_duration"),
                 func.sum(incoming_case).label("incoming"),
@@ -89,9 +78,9 @@ def performance():
             .filter(
                 User.admin_id == admin_id,
                 or_(
-                    CallHistory.timestamp >= int(datetime.combine(start, datetime.min.time()).timestamp()) 
-                    if CallHistory.timestamp is not None else True,
-                    CallHistory.timestamp == None
+                    CallHistory.timestamp == None,
+                    and_(CallHistory.timestamp >= start_ts,
+                         CallHistory.timestamp < end_ts)
                 )
             )
             .group_by(User.id)
@@ -112,15 +101,9 @@ def performance():
                 "rejected": int(u.rejected or 0),
             })
 
-        # ----------------------------
-        # SUMMARY (Admin overall)
-        # ----------------------------
-        total_calls = sum(u["total_calls"] for u in users_list)
-        total_duration = sum(u["total_duration_sec"] for u in users_list)
-
         summary = {
-            "total_calls": total_calls,
-            "total_duration_sec": total_duration,
+            "total_calls": sum(u["total_calls"] for u in users_list),
+            "total_duration_sec": sum(u["total_duration_sec"] for u in users_list),
             "total_users": len(users_list),
             "filter": filter_type
         }
