@@ -42,7 +42,8 @@ def create_app(config_class=Config):
     from app.routes.admin_attendance import bp as admin_attendance_bp
     from app.routes.admin_call_analytics import bp as call_analytics_bp
     from app.routes.admin_performance import bp as admin_performance_bp
-   # ✅ ADD THIS
+    # If you have analytics route, import it
+    # from app.routes.analytics import bp as analytics_bp
 
     app.register_blueprint(super_admin_bp)
     app.register_blueprint(admin_bp)
@@ -54,10 +55,9 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_attendance_bp)
     app.register_blueprint(call_analytics_bp)
     app.register_blueprint(admin_performance_bp)
-    app.register_blueprint(analytics_bp)    # ✅ ADD THIS
 
-
-    app.register_blueprint(admin_performance_bp)
+    # Uncomment only if analytics_bp exists
+    # app.register_blueprint(analytics_bp)
 
     # ---------------------------
     # INITIAL DATABASE SETUP
@@ -68,16 +68,16 @@ def create_app(config_class=Config):
 
         if not tables:
             print("⚙ Creating DB tables...")
-            # db.create_all()
+            db.create_all()
             print("✅ DB created")
 
+        # Create default super admin (if needed)
         # if not SuperAdmin.query.first():
-        #     print("⚙ Creating default Super Admin")
         #     sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
         #     sa.set_password("admin123")
         #     db.session.add(sa)
         #     db.session.commit()
-        #     print("✅ SuperAdmin created")
+        #     print("✅ Default SuperAdmin created")
 
     # ---------------------------
     # FRONTEND ROUTING
@@ -93,7 +93,7 @@ def create_app(config_class=Config):
     def health():
         return jsonify({"status": "running", "db": "connected"}), 200
 
-    # --- SUPER ADMIN PANEL ---
+    # SUPER ADMIN PANEL
     @app.route("/super_admin/login.html")
     def super_admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), "login.html")
@@ -102,7 +102,7 @@ def create_app(config_class=Config):
     def super_admin_static(filename):
         return send_from_directory(os.path.join(FRONTEND_PATH, "super_admin"), filename)
 
-    # --- ADMIN PANEL ---
+    # ADMIN PANEL
     @app.route("/admin/login.html")
     def admin_login_page():
         return send_from_directory(os.path.join(FRONTEND_PATH, "admin"), "login.html")
