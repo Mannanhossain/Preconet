@@ -1,4 +1,3 @@
-# app/__init__.py
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -40,10 +39,8 @@ def create_app(config_class=Config):
     from app.routes.call_history import bp as call_history_bp
     from app.routes.admin_call_history import bp as admin_call_history_bp
     from app.routes.admin_attendance import bp as admin_attendance_bp
-    from app.routes.admin_call_analytics import bp as call_analytics_bp
+    from app.routes.admin_call_analytics import bp as admin_call_analytics_bp
     from app.routes.admin_performance import bp as admin_performance_bp
-    # If you have analytics route, import it
-    # from app.routes.analytics import bp as analytics_bp
 
     app.register_blueprint(super_admin_bp)
     app.register_blueprint(admin_bp)
@@ -53,11 +50,8 @@ def create_app(config_class=Config):
     app.register_blueprint(call_history_bp)
     app.register_blueprint(admin_call_history_bp)
     app.register_blueprint(admin_attendance_bp)
-    app.register_blueprint(call_analytics_bp)
+    app.register_blueprint(admin_call_analytics_bp)
     app.register_blueprint(admin_performance_bp)
-
-    # Uncomment only if analytics_bp exists
-    # app.register_blueprint(analytics_bp)
 
     # ---------------------------
     # INITIAL DATABASE SETUP
@@ -71,20 +65,13 @@ def create_app(config_class=Config):
             db.create_all()
             print("✅ DB created")
 
-        # Create default super admin (if needed)
-        # if not SuperAdmin.query.first():
-        #     sa = SuperAdmin(name="Super Admin", email="super@callmanager.com")
-        #     sa.set_password("admin123")
-        #     db.session.add(sa)
-        #     db.session.commit()
-        #     print("✅ Default SuperAdmin created")
-
     # ---------------------------
     # FRONTEND ROUTING
     # ---------------------------
     FRONTEND_PATH = os.path.abspath(os.path.join(os.getcwd(), "frontend"))
     print("📁 FRONTEND PATH:", FRONTEND_PATH)
 
+    # Health Check
     @app.route("/")
     def home():
         return jsonify({"status": "running"})
