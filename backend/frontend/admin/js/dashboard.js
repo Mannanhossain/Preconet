@@ -1,21 +1,27 @@
 /* admin/js/dashboard.js */
 class DashboardManager {
-  constructor(){ this.stats = {}; }
+  constructor() {
+    this.stats = {};
+  }
 
   async loadStats() {
     try {
       const resp = await auth.makeAuthenticatedRequest('/api/admin/dashboard-stats');
       if (!resp) return;
+
       const data = await resp.json();
       if (!resp.ok) {
         auth.showNotification(data.error || 'Failed to load dashboard stats', 'error');
         return;
       }
+
       this.stats = data.stats || {};
+
       this.renderStats();
       this.renderRecentSync();
       this.renderUserLogs();
       this.renderPerformanceChart();
+
     } catch (e) {
       console.error(e);
       auth.showNotification('Failed to load dashboard stats', 'error');
@@ -25,7 +31,9 @@ class DashboardManager {
   renderStats() {
     const container = document.getElementById('stats-cards');
     if (!container) return;
+
     const s = this.stats;
+
     const cards = [
       { title: "Total Users", value: s.total_users ?? 0, icon: "users", color: "blue" },
       { title: "Active Users", value: s.active_users ?? 0, icon: "user-check", color: "green" },
@@ -48,38 +56,58 @@ class DashboardManager {
     `).join('');
   }
 
+  // ✓ FIXED VERSION — No undefined fields
   async renderRecentSync() {
     try {
       const resp = await auth.makeAuthenticatedRequest('/api/admin/recent-sync');
       if (!resp) return;
+
       const data = await resp.json();
-      if (!resp.ok) { auth.showNotification(data.error || 'Failed to load recent sync', 'error'); return; }
+      if (!resp.ok) {
+        auth.showNotification(data.error || 'Failed to load recent sync', 'error');
+        return;
+      }
+
       const list = document.getElementById('recent-sync-list');
       if (!list) return;
+
       this.recent = data.recent_sync || [];
+
       list.innerHTML = this.recent.map(r => `
-        <div class="border p-3 rounded">
+        <div class="border p-3 rounded bg-white">
           <div class="flex justify-between items-start">
             <div>
               <div class="font-medium">${r.name}</div>
-              <div class="text-xs text-gray-500">Last: ${r.last_sync ? new Date(r.last_sync).toLocaleString() : 'Never'}</div>
+              <div class="text-xs text-gray-500">
+                Last Sync: ${r.last_sync ? new Date(r.last_sync).toLocaleString() : 'Never'}
+              </div>
             </div>
-            <div class="text-sm text-gray-500">${r.call_records ?? 0} calls</div>
+            <div class="text-sm ${r.is_active ? 'text-green-600' : 'text-red-600'}">
+              ${r.is_active ? 'Active' : 'Inactive'}
+            </div>
           </div>
         </div>
       `).join('');
-    } catch (e) { console.error(e); auth.showNotification('Failed to load recent sync', 'error'); }
+
+    } catch (e) {
+      console.error(e);
+      auth.showNotification('Failed to load recent sync', 'error');
+    }
   }
 
   async renderUserLogs() {
     try {
       const resp = await auth.makeAuthenticatedRequest('/api/admin/user-logs');
       if (!resp) return;
+
       const data = await resp.json();
-      if (!resp.ok) { /* Not critical */ return; }
+      if (!resp.ok) return; // not critical
+
       const container = document.getElementById('user-logs-container');
       if (!container) return;
+
       const logs = data.logs || [];
+
       container.innerHTML = logs.map(l => `
         <div class="p-4 rounded border bg-white">
           <div class="flex justify-between items-center">
@@ -87,30 +115,35 @@ class DashboardManager {
               <div class="font-medium">${l.user_name || 'Unknown'}</div>
               <div class="text-xs text-gray-500">${l.action}</div>
             </div>
-            <div class="text-xs text-gray-500">${new Date(l.timestamp).toLocaleString()}</div>
+            <div class="text-xs text-gray-500">
+              ${new Date(l.timestamp).toLocaleString()}
+            </div>
           </div>
         </div>
       `).join('');
-    } catch (e) { console.error(e); }
+
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   renderPerformanceChart() {
     const ctx = document.getElementById('performanceChart');
-    if (!ctx) return;
-    if (typeof Chart === 'undefined') return;
+    if (!ctx || typeof Chart === 'undefined') return;
+
     new Chart(ctx, {
       type: 'line',
       data: {
         labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
         datasets: [{ 
           label: 'Avg Performance', 
-          data: (this.stats && this.stats.performance_trend) || [0,0,0,0,0,0,0], 
-          borderColor:'#2563EB', 
-          fill:false,
+          data: this.stats.performance_trend || [0,0,0,0,0,0,0], 
+          borderColor: '#2563EB',
+          fill: false,
           tension: 0.3
         }]
       },
-      options: { responsive:true, maintainAspectRatio:false }
+      options: { responsive: true, maintainAspectRatio: false }
     });
   }
 }
