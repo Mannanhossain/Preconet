@@ -2,13 +2,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from flask import Flask, jsonify, send_from_directory
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, get_jwt, get_jwt_identity, jwt_required
 from flask_migrate import Migrate
 from flask_cors import CORS
 from sqlalchemy import inspect
+from datetime import datetime
 import os
 
-from app.models import db, bcrypt, SuperAdmin
+from app.models import db, bcrypt, SuperAdmin, Admin, User
 from config import Config
 
 jwt = JWTManager()
@@ -27,6 +28,45 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     migrate.init_app(app, db)
     CORS(app)
+
+    # ==========================================================
+    # 🔥 GLOBAL TOKEN VALIDATION FOR ADMIN EXPIRY & USER BLOCKING
+    # ==========================================================
+    @app.before_request
+    @jwt_required(optional=True)
+    def global_subscription_checker():
+        """
+        This runs on EVERY authenticated route.
+        Blocks:
+        - Expired Admin
+        - Users under expired Admin
+        """
+
+        jwt_data = get_jwt()
+        identity = get_jwt_identity()
+
+        if not identity:
+            return  # Public route → ignore
+
+        role = jwt_data.get("role")
+
+        # --- ADMIN LOGIN CHECK ---
+        if role == "admin":
+            admin = Admin.query.get(int(identity))
+            if admin and admin.expiry_date and admin.expiry_date < datetime.utcnow().date():
+                return jsonify({"error": "Admin subscription expired"}), 403
+
+        # --- USER LOGIN CHECK ---
+        elif role == "user":
+            user = User.query.get(int(identity))
+            if not user:
+                return jsonify({"error": "Invalid user"}), 403
+
+            admin = Admin.query.get(user.admin_id)
+            if admin and admin.expiry_date and admin.expiry_date < datetime.utcnow().date():
+                return jsonify({"error": "Your admin subscription has expired"}), 403
+
+        return  # Allow request
 
     # ---------------------------
     # REGISTER BLUEPRINTS
@@ -69,9 +109,7 @@ def create_app(config_class=Config):
     # FRONTEND ROUTING
     # ---------------------------
     FRONTEND_PATH = os.path.abspath(os.path.join(os.getcwd(), "frontend"))
-    print("📁 FRONTEND PATH:", FRONTEND_PATH)
 
-    # Health Check
     @app.route("/")
     def home():
         return jsonify({"status": "running"})
