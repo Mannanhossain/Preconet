@@ -1,8 +1,8 @@
 # app/routes/admin_all_call_history.py
 
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt
-from sqlalchemy import func
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from datetime import datetime, timedelta
 from app.models import db, User, CallHistory
 
 bp = Blueprint("admin_all_call_history", __name__, url_prefix="/api/admin")
@@ -21,15 +21,67 @@ def admin_required(fn):
 @admin_required
 def all_call_history():
     try:
+        admin_id = int(get_jwt_identity())
+
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 50))
 
+        # ============================
+        # 1️⃣ DATE FILTER
+        # ============================
+        filter_type = request.args.get("filter")  # today / week / month
+        custom_date = request.args.get("date")  # YYYY-MM-DD format
+        
+        now = datetime.utcnow()
+        start_time = None
+
+        if filter_type == "today":
+            start_time = datetime(now.year, now.month, now.day)
+        elif filter_type == "week":
+            start_time = now - timedelta(days=7)
+        elif filter_type == "month":
+            start_time = now - timedelta(days=30)
+        elif custom_date:
+            try:
+                start_time = datetime.strptime(custom_date, "%Y-%m-%d")
+            except:
+                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        # ============================
+        # 2️⃣ PHONE SEARCH FILTER
+        # ============================
+        search = request.args.get("search")
+        
+        # ============================
+        # 3️⃣ CALL TYPE FILTER
+        # ============================
+        call_type = request.args.get("call_type")  # incoming/outgoing/missed
+
+        # ============================
+        # BASE QUERY (JOIN + ADMIN FILTER)
+        # ============================
         query = (
             db.session.query(CallHistory, User)
             .join(User, CallHistory.user_id == User.id)
-            .order_by(CallHistory.timestamp.desc())
+            .filter(User.admin_id == admin_id)
         )
 
+        # Apply date filter
+        if start_time:
+            query = query.filter(CallHistory.timestamp >= start_time)
+
+        # Apply phone number search
+        if search:
+            query = query.filter(CallHistory.phone_number.like(f"%{search}%"))
+
+        # Apply call type filter
+        if call_type:
+            query = query.filter(CallHistory.call_type == call_type)
+
+        # Sorting
+        query = query.order_by(CallHistory.timestamp.desc())
+
+        # Pagination
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 
         data = []
@@ -57,7 +109,7 @@ def all_call_history():
                 "has_next": paginated.has_next,
                 "has_prev": paginated.has_prev,
             }
-        })
+        }), 200
 
     except Exception as e:
         return jsonify({"error": "Internal error", "detail": str(e)}), 500
