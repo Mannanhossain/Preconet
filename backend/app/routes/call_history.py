@@ -29,16 +29,11 @@ def iso(dt):
 
 
 def parse_timestamp(ts_value):
-    """
-    Convert timestamp input from:
-    - ISO string
-    - epoch seconds
-    - epoch milliseconds
-    - and return datetime OR None
-    """
+    """Convert timestamp input from ISO string, seconds, or milliseconds."""
     if ts_value is None:
         return None
 
+    # Epoch seconds/milliseconds
     if isinstance(ts_value, (int, float)):
         try:
             # milliseconds
@@ -49,6 +44,7 @@ def parse_timestamp(ts_value):
         except:
             return None
 
+    # ISO string
     if isinstance(ts_value, str):
         try:
             if ts_value.endswith("Z"):
@@ -88,7 +84,7 @@ def paginate(query):
 
 
 # -------------------------------------------------
-# 1) SYNC CALL HISTORY (MOBILE → SERVER)
+# 1️⃣ SYNC CALL HISTORY (MOBILE → SERVER)
 # -------------------------------------------------
 @bp.route("/sync", methods=["POST"])
 @jwt_required()
@@ -124,15 +120,12 @@ def sync_call_history():
                 errors.append({"entry": entry, "error": "Invalid timestamp format"})
                 continue
 
-            # ➤ Normalize timestamp (DROP microseconds)
             dt = dt.replace(microsecond=0)
 
             formatted_number = entry.get("formatted_number") or ""
             contact_name = entry.get("contact_name") or ""
 
-            # ----------------------------------------------------
-            # SAFE DUPLICATE CHECK (No timestamp comparison!)
-            # ----------------------------------------------------
+            # Duplicate check (safe)
             duplicate = CallHistory.query.filter(
                 CallHistory.user_id == user_id,
                 CallHistory.phone_number == phone_number,
@@ -156,16 +149,16 @@ def sync_call_history():
             db.session.add(new_record)
             saved += 1
 
+        # 🔥 ALWAYS UPDATE USER SYNC TIME FIRST
+        user.last_sync = datetime.utcnow()
+        db.session.add(user)
+
+        # 🔥 COMMIT EVERYTHING TOGETHER (both new calls & last_sync)
         try:
             db.session.commit()
         except Exception as e:
             db.session.rollback()
             return jsonify({"error": "DB commit failed", "detail": str(e)}), 500
-
-        # Update sync time
-        user.last_sync = datetime.utcnow()
-        db.session.add(user)
-        db.session.commit()
 
         return jsonify({
             "message": "Call history synced",
@@ -179,7 +172,7 @@ def sync_call_history():
 
 
 # -------------------------------------------------
-# 2) USER — FETCH MY CALL HISTORY
+# 2️⃣ USER — FETCH MY CALL HISTORY
 # -------------------------------------------------
 @bp.route("/my", methods=["GET"])
 @jwt_required()
@@ -205,7 +198,7 @@ def my_call_history():
 
 
 # -------------------------------------------------
-# 3) ADMIN — FETCH SPECIFIC USER CALL HISTORY
+# 3️⃣ ADMIN — FETCH SPECIFIC USER CALL HISTORY
 # -------------------------------------------------
 @bp.route("/admin/<int:user_id>", methods=["GET"])
 @jwt_required()
