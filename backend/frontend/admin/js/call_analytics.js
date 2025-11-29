@@ -5,9 +5,13 @@ class CallAnalyticsManager {
     this.chart = null; // prevent chart overlapping
   }
 
-  async loadAnalytics() {
+  async loadAnalytics(filter = "") {
     try {
-      const resp = await auth.makeAuthenticatedRequest("/api/admin/call-analytics");
+      // Build URL with filter
+      let url = "/api/admin/call-analytics";
+      if (filter) url += `?filter=${filter}`;
+
+      const resp = await auth.makeAuthenticatedRequest(url);
       if (!resp) return;
 
       const data = await resp.json();
@@ -41,7 +45,6 @@ class CallAnalyticsManager {
       { label: "Missed", value: d.missed || 0, icon: "phone-slash", color: "red" }
     ];
 
-    // Tailwind CDN cannot generate dynamic classes → use fixed classes
     const colorMap = {
       blue: "bg-blue-100 text-blue-600",
       green: "bg-green-100 text-green-600",
@@ -68,7 +71,10 @@ class CallAnalyticsManager {
     const el = document.getElementById("call-trend-canvas");
     if (!el || typeof Chart === "undefined") return;
 
-    const trend = this.data?.daily_series || { labels: [], values: [] };
+    const trend = this.data?.daily_trend || [];
+
+    const labels = trend.map(t => t.date);
+    const values = trend.map(t => t.count);
 
     // Prevent duplicate charts
     if (this.chart) this.chart.destroy();
@@ -76,11 +82,11 @@ class CallAnalyticsManager {
     this.chart = new Chart(el, {
       type: "bar",
       data: {
-        labels: trend.labels,
+        labels: labels,
         datasets: [
           {
             label: "Calls",
-            data: trend.values,
+            data: values,
             borderWidth: 2
           }
         ]
