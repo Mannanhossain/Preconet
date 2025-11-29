@@ -1,7 +1,9 @@
+# app/routes/admin_dashboard.py
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, timedelta
-from sqlalchemy import func, desc
+from sqlalchemy import func
 from extensions import db
 from ..models import User, Admin, Attendance, CallHistory, ActivityLog
 
@@ -23,7 +25,7 @@ def iso(dt):
 
 
 # =========================================================
-# 1️⃣ DASHBOARD STATS
+# 1️⃣ DASHBOARD STATS (TOP CARDS)
 # =========================================================
 @admin_dashboard_bp.route("/dashboard-stats", methods=["GET"])
 @jwt_required()
@@ -51,13 +53,13 @@ def dashboard_stats():
             "users_with_sync": synced,
             "sync_rate": round((synced / total) * 100, 2) if total else 0,
             "avg_performance": avg_perf,
-            "performance_trend": [50, 60, 70, 65, 82, 78, 90]  # can be replaced with real data
+            "performance_trend": [50, 60, 70, 65, 82, 78, 90]
         }
     }), 200
 
 
 # =========================================================
-# 2️⃣ RECENT SYNC LAST 10 USERS
+# 2️⃣ FIXED — RECENT SYNC LAST 10 USERS
 # =========================================================
 @admin_dashboard_bp.route("/recent-sync", methods=["GET"])
 @jwt_required()
@@ -65,12 +67,12 @@ def recent_sync():
     if not admin_required():
         return jsonify({"error": "Admin only"}), 403
 
-    admin_id = get_jwt_identity()
+    admin_id = int(get_jwt_identity())
 
     users = (
-        User.query.filter_by(admin_id=admin_id)
-        .filter(User.last_sync.isnot(None))
-        .order_by(User.last_sync.desc())
+        User.query
+        .filter(User.admin_id == admin_id)
+        .order_by(User.last_sync.desc().nullslast())
         .limit(10)
         .all()
     )
@@ -80,12 +82,14 @@ def recent_sync():
             {
                 "id": u.id,
                 "name": u.name,
-                "email": u.email,
-                "phone": u.phone,
+                "email": u.email or "-",
+                "phone": u.phone or "-",
+                "is_active": u.is_active,
                 "last_sync": iso(u.last_sync)
-            } for u in users
+            }
+            for u in users
         ]
-    })
+    }), 200
 
 
 # =========================================================
@@ -117,7 +121,7 @@ def user_logs():
             }
             for log, u in logs
         ]
-    })
+    }), 200
 
 
 # =========================================================
@@ -157,7 +161,7 @@ def admin_attendance():
 
 
 # =========================================================
-# 5️⃣ ADMIN — ALL CALL HISTORY (LIMIT 200)
+# 5️⃣ ADMIN — SIMPLE CALL HISTORY (LATEST 200)
 # =========================================================
 @admin_dashboard_bp.route("/call-history", methods=["GET"])
 @jwt_required()
@@ -167,14 +171,14 @@ def admin_call_history():
 
     admin_id = int(get_jwt_identity())
 
-    # get all users belonging to this admin
-    user_ids = [u.id for u in User.query.filter_by(admin_id=admin_id).all()]
+    users = User.query.filter_by(admin_id=admin_id).all()
+    user_ids = [u.id for u in users]
 
     calls = (
         db.session.query(CallHistory, User)
         .join(User, User.id == CallHistory.user_id)
         .filter(CallHistory.user_id.in_(user_ids))
-        .order_by(CallHistory.created_at.desc())
+        .order_by(CallHistory.timestamp.desc())
         .limit(200)
         .all()
     )
@@ -185,85 +189,23 @@ def admin_call_history():
                 "id": c.id,
                 "user_id": u.id,
                 "user_name": u.name,
-                "number": c.number,
+                "phone_number": c.phone_number,
                 "call_type": c.call_type,
                 "duration": c.duration,
-                "timestamp": c.timestamp,
-                "created_at": iso(c.created_at)
+                "timestamp": iso(c.timestamp),
+                "created_at": iso(c.created_at),
             }
             for c, u in calls
         ]
-    })
-
-
-# =========================================================
-# 6️⃣ ADMIN — CALL ANALYTICS (Charts + Table)
-# =========================================================
-@admin_dashboard_bp.route("/call-analytics", methods=["GET"])
-@jwt_required()
-def call_analytics():
-    if not admin_required():
-        return jsonify({"error": "Admin only"}), 403
-
-    admin_id = int(get_jwt_identity())
-
-    # ---------- DAILY CALL COUNT (Last 7 Days) ----------
-    today = datetime.utcnow().date()
-    start_day = today - timedelta(days=6)
-
-    daily = (
-        db.session.query(
-            func.date(CallHistory.created_at).label("day"),
-            func.count(CallHistory.id)
-        )
-        .join(User)
-        .filter(User.admin_id == admin_id)
-        .filter(CallHistory.created_at >= start_day)
-        .group_by(func.date(CallHistory.created_at))
-        .order_by(func.date(CallHistory.created_at))
-        .all()
-    )
-
-    labels = []
-    values = []
-
-    for i in range(7):
-        day = start_day + timedelta(days=i)
-        labels.append(day.strftime("%d %b"))
-
-        found = next((v for d, v in daily if d == day), 0)
-        values.append(found)
-
-    # ---------- USER SUMMARY ----------
-    summary = (
-        db.session.query(
-            User.name,
-            func.count(CallHistory.id),
-            func.sum(CallHistory.duration),
-            func.sum(func.case([(CallHistory.call_type == "incoming", 1)], else_=0)),
-            func.sum(func.case([(CallHistory.call_type == "outgoing", 1)], else_=0)),
-            func.sum(func.case([(CallHistory.call_type == "missed", 1)], else_=0)),
-        )
-        .join(CallHistory, User.id == CallHistory.user_id)
-        .filter(User.admin_id == admin_id)
-        .group_by(User.id)
-        .all()
-    )
-
-    return jsonify({
-        "daily_series": {
-            "labels": labels,
-            "values": values,
-        },
-        "user_summary": [
-            {
-                "user_name": row[0],
-                "total_calls": row[1] or 0,
-                "total_duration": row[2] or 0,
-                "incoming": row[3] or 0,
-                "outgoing": row[4] or 0,
-                "missed": row[5] or 0,
-            }
-            for row in summary
-        ]
     }), 200
+
+
+# =========================================================
+# 6️⃣ ADMIN — CALL ANALYTICS (Frontend uses new API)
+# =========================================================
+# NOTE:
+# This file now keeps only the LATEST-CALLS version
+# The real analytics is handled in:
+#   app/routes/admin_call_analytics.py
+# which you already fixed and connected JS to.
+
