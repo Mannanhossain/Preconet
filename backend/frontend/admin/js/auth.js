@@ -1,47 +1,73 @@
 /* ================================
-   AUTH UTILITIES (ADMIN PANEL)
-================================ */
+        AUTH UTILITIES (ADMIN PANEL)
+   ================================= */
 
 class Auth {
     constructor() {
         this.tokenKey = "admin_token";
         this.userKey = "admin_user";
+        this.emailKey = "admin_email";   // NEW → Remember Email
     }
 
-    // Save token + user
+    /* ---------------------------------
+        SAVE LOGIN (TOKEN + USER DATA)
+        NOW USING localStorage → One-time login
+    --------------------------------- */
     saveLogin(token, user) {
-        sessionStorage.setItem(this.tokenKey, token);
-        sessionStorage.setItem(this.userKey, JSON.stringify(user));
+        localStorage.setItem(this.tokenKey, token);
+        localStorage.setItem(this.userKey, JSON.stringify(user));
+
+        // Save email for next login screen (not required but helpful)
+        if (user?.email) {
+            localStorage.setItem(this.emailKey, user.email);
+        }
     }
 
-    // Get token
+    /* ---------------------------------
+        GET LOGIN TOKEN
+    --------------------------------- */
     getToken() {
-        return sessionStorage.getItem(this.tokenKey);
+        return localStorage.getItem(this.tokenKey);
     }
 
-    // Get logged in admin
+    /* ---------------------------------
+        GET CURRENT LOGGED-IN ADMIN DATA
+    --------------------------------- */
     getCurrentUser() {
-        const raw = sessionStorage.getItem(this.userKey);
+        const raw = localStorage.getItem(this.userKey);
         return raw ? JSON.parse(raw) : null;
     }
 
-    // Logout
+    /* ---------------------------------
+        LOGOUT (CLEAR EVERYTHING)
+    --------------------------------- */
     logout() {
-        sessionStorage.clear();
+        localStorage.removeItem(this.tokenKey);
+        localStorage.removeItem(this.userKey);
         window.location.href = "/admin/login.html";
     }
 
-    // Authenticated API calls (IMPORTANT!!)
+    /* ---------------------------------
+        REMEMBERED EMAIL FOR LOGIN FORM
+    --------------------------------- */
+    getRememberedEmail() {
+        return localStorage.getItem(this.emailKey) || "";
+    }
+
+
+    /* ---------------------------------
+        MAKE AUTHENTICATED REQUEST
+        AUTO HANDLE TOKEN & 401 ERRORS
+    --------------------------------- */
     async makeAuthenticatedRequest(url, options = {}) {
         const token = this.getToken();
 
         if (!token) {
-            console.warn("No token — redirecting");
+            this.showNotification("Please login again", "error");
             this.logout();
             return;
         }
 
-        // Ensure URL always starts with /api
         const finalUrl = url.startsWith("/api") ? url : `/api${url}`;
 
         const headers = {
@@ -56,14 +82,17 @@ class Auth {
         });
 
         if (resp.status === 401) {
-            this.showNotification("Session expired — please login again", "error");
+            this.showNotification("Session expired — login again", "error");
             this.logout();
         }
 
         return resp;
     }
 
-    // Notifications
+
+    /* ---------------------------------
+        NOTIFICATION SYSTEM
+    --------------------------------- */
     showNotification(message, type = "info") {
         let area = document.getElementById("notificationArea");
 
@@ -83,14 +112,13 @@ class Auth {
 
         const div = document.createElement("div");
         div.className = `
-            text-white px-4 py-2 rounded shadow 
+            text-white px-4 py-3 rounded shadow-lg flex items-center gap-3 
+            transition-all duration-300
             ${palette[type] || palette.info}
         `;
         div.innerHTML = `
-            <div class="flex items-center gap-3">
-                <i class="fas fa-info-circle"></i>
-                <span>${message}</span>
-            </div>
+            <i class="fas fa-circle-info"></i>
+            <span>${message}</span>
         `;
 
         area.appendChild(div);
@@ -104,3 +132,23 @@ class Auth {
 
 // GLOBAL INSTANCE
 const auth = new Auth();
+
+/* ---------------------------------
+   AUTO REDIRECT (FOR ALL ADMIN PAGES)
+---------------------------------- */
+
+document.addEventListener("DOMContentLoaded", () => {
+    const isLoginPage = window.location.pathname.includes("login");
+
+    if (!isLoginPage && !auth.getToken()) {
+        window.location.href = "/admin/login.html";
+    }
+
+    // Auto-fill email on login page
+    if (isLoginPage) {
+        const emailField = document.getElementById("email");
+        if (emailField) {
+            emailField.value = auth.getRememberedEmail();
+        }
+    }
+});
