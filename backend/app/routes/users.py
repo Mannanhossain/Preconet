@@ -129,7 +129,6 @@ def register():
     except Exception as e:
         return jsonify({"error": "Internal server error", "detail": str(e)}), 500
 
-
 # -----------------------
 # LOGIN (user)
 # -----------------------
@@ -143,6 +142,7 @@ def login():
         if not email or not password:
             return jsonify({"error": "Email & password required"}), 400
 
+        # 1. Get User
         user = User.query.filter(func.lower(User.email) == email.lower()).first()
         if not user or not user.check_password(password):
             return jsonify({"error": "Invalid credentials"}), 401
@@ -150,7 +150,18 @@ def login():
         if not user.is_active:
             return jsonify({"error": "Account deactivated"}), 403
 
-        # FIXED: Do NOT use session.add() for existing objects
+        # 2. 🔥 Get the Admin who created this user
+        admin = Admin.query.get(user.admin_id)
+        if not admin:
+            return jsonify({"error": "Admin account removed"}), 403
+
+        # 3. 🔥 BLOCK LOGIN IF ADMIN IS EXPIRED
+        if admin.expiry_date and admin.expiry_date < datetime.utcnow().date():
+            return jsonify({
+                "error": "Your admin subscription has expired. Login is blocked."
+            }), 403
+
+        # 4. Update user last login
         try:
             user.last_login = datetime.utcnow()
             db.session.commit()
@@ -158,6 +169,7 @@ def login():
             db.session.rollback()
             current_app.logger.exception("Failed to update last_login")
 
+        # 5. Create JWT token
         token = create_access_token(
             identity=str(user.id),
             additional_claims={"role": "user"}
@@ -174,12 +186,12 @@ def login():
                 "performance_score": user.performance_score,
                 "last_sync": iso(user.last_sync),
                 "expiry_date": str(user.expiry_date) if user.expiry_date else None
-
             }
         }), 200
 
     except Exception as e:
         return jsonify({"error": "Internal server error", "detail": str(e)}), 500
+
 
 
 # -----------------------
@@ -336,5 +348,4 @@ def sync_status():
 
     except Exception as e:
         return jsonify({"error": "Internal server error", "detail": str(e)}), 500
-
 
