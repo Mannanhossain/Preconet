@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from extensions import db
 from ..models import User
@@ -20,26 +20,31 @@ def admin_required():
 @performance_bp.route("/performance", methods=["GET"])
 @jwt_required()
 def admin_performance():
-    # Reject non-admins
+
     if not admin_required():
         return jsonify({"error": "Admin only"}), 403
 
     admin_id = int(get_jwt_identity())
 
-    # Fetch all users belonging to this admin
-    users = (
-        User.query
-        .filter_by(admin_id=admin_id)
-        .order_by(User.performance_score.desc())
-        .limit(50)  # safety limit
-        .all()
-    )
+    # sorting support (optional)
+    sort = request.args.get("sort", "desc")
+
+    query = User.query.filter_by(admin_id=admin_id)
+
+    if sort == "asc":
+        query = query.order_by(User.performance_score.asc())
+    else:
+        query = query.order_by(User.performance_score.desc())
+
+    users = query.limit(50).all()
 
     labels = [u.name for u in users]
-    values = [round(u.performance_score, 2) for u in users]
+    values = [round((u.performance_score or 0), 2) for u in users]
+    ids = [u.id for u in users]
 
     return jsonify({
         "labels": labels,
         "values": values,
+        "user_ids": ids,
         "count": len(users)
     }), 200
