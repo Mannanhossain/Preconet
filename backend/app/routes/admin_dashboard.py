@@ -4,8 +4,9 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, timedelta
 from sqlalchemy import func
-from extensions import db
+from app.models import db
 from ..models import User, Admin, Attendance, CallHistory, ActivityLog
+g
 
 admin_dashboard_bp = Blueprint("admin_dashboard", __name__, url_prefix="/api/admin")
 
@@ -208,4 +209,5 @@ def admin_call_history():
 # The real analytics is handled in:
 #   app/routes/admin_call_analytics.py
 # which you already fixed and connected JS to.
+
 
